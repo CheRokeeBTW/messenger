@@ -3,6 +3,20 @@ import http from 'http';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import { pool } from "./config/db.js";
+import { socketHandler } from './sockets/socketHandler.js';
+import authRoutes from "./routes/auth.routes.js";
+
+async function testDB() {
+  try {
+    const result = await pool.query("SELECT NOW()");
+    console.log("DB connected:", result.rows[0]);
+  } catch (err) {
+    console.error("DB error:", err);
+  }
+}
+
+testDB();
 
 dotenv.config();
 
@@ -16,7 +30,10 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"], 
   })
 );
+
 app.use(express.json());
+
+app.use("/auth", authRoutes);
 
 app.get('/', (req, res) => {
   res.send('Messanger works')
@@ -31,20 +48,8 @@ const io = new Server(server, {
   }
 });
 
-io.on('connection', (socket) => {
-    console.log('user connected', socket.id);
+socketHandler(io);
 
-    socket.on('send_message', (data) => {
-        console.log("Message received", data)
-
-        socket.broadcast.emit('receive_message', data)
-    });
-
-    socket.on('disconnect', () => {
-        console.log('user disconnected', socket.id)
-    });
+server.listen(port, () => {
+  console.log(`Server running on ${port}`);
 });
-
-app.listen(port, () => {
-  console.log(`Listening on ${port}`)
-})
