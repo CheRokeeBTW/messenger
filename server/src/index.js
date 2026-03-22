@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { pool } from "./config/db.js";
 import { socketHandler } from './sockets/socketHandler.js';
 import authRoutes from "./routes/auth.routes.js";
+import conversationRoutes from "./routes/converstation.routes.js";
 
 async function testDB() {
   try {
@@ -33,8 +34,13 @@ app.use(
 
 app.use(express.json());
 
+//auth
 app.use("/auth", authRoutes);
 
+//conversations
+app.use("/conversations", conversationRoutes);
+
+//does it work?
 app.get('/', (req, res) => {
   res.send('Messanger works')
 });
