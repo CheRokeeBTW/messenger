@@ -7,6 +7,7 @@ import { pool } from "./config/db.js";
 import { socketHandler } from './sockets/socketHandler.js';
 import authRoutes from "./routes/auth.routes.js";
 import conversationRoutes from "./routes/converstation.routes.js";
+import messageRoutes from './routes/message.routes.js';
 
 async function testDB() {
   try {
@@ -39,6 +40,9 @@ app.use("/auth", authRoutes);
 
 //conversations
 app.use("/conversations", conversationRoutes);
+
+//messages
+app.use("/messages", messageRoutes);
 
 //does it work?
 app.get('/', (req, res) => {

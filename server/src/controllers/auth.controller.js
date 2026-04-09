@@ -38,9 +38,6 @@ export async function register(req, res) {
   }
 }
 
-/*
- Login user
-*/
 export async function login(req, res) {
   try {
     const { email, password } = req.body;
@@ -67,7 +64,6 @@ export async function login(req, res) {
       });
     }
 
-    // create token
     const token = jwt.sign(
       { userId: user.rows[0].id },
       process.env.JWT_SECRET,
