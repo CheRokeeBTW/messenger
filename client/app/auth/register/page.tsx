@@ -1,14 +1,15 @@
 "use client";
 import { useState } from "react";
-import styles from './page.module.css';
+import { registerUser } from "@/app/services/auth.services";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage(){
-    const [email, setEmail] = useState< string>("");
+    const [email, setEmail] = useState<string>("");
     const [username, setUsername] = useState<string>("");
     const [password, setPassword] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-
+    const router = useRouter();
 
     const handleRegister = async () =>{
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,34 +38,23 @@ export default function RegisterPage(){
         setIsLoading(true);
 
         try{
-            const res = await fetch("http://localhost:3001/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json"},
-                body: JSON.stringify({ email, password, username }),
-            });
+            const data = await registerUser(email, username, password);
 
+            console.log('User registered:', data);
             setIsLoading(false);
-            
-           const data = await res.json();
 
-            if (!res.ok) {
-            setError(data.message);
-            return;
-            }
+            router.push("/auth/login");
         }
-            finally {
+        catch(err){
+            if(err instanceof Error){
+                setError(err.message);
                 setIsLoading(false);
             }
-        // catch(error){
-        //     if(error instanceof Error){
-        //         setError(error.message);
-        //         setIsLoading(false);
-        //     }
-        //     else{
-        //         setError('Registration failed');
-        //         setIsLoading(false);
-        //     }
-        // }
+            else{
+                setError('Registration failed');
+                setIsLoading(false);
+            }
+        }
     }
 
     return(
@@ -109,7 +99,7 @@ export default function RegisterPage(){
                     className = {`hover:cursor-pointer border rounded-lg ${
                         isLoading
                         ? "bg-zinc-600 cursor-not-allowed"
-                        : "bg-gray-400 hover:bg-gray-100"
+                        : "bg-gray-700 hover:bg-gray-400"
                     }`}
                 >
                     {isLoading ? "Creating an account" : "Register"}
