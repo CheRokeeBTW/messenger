@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { getConversations, getUsers, createConversation } from "../services/chat.services";
+import Highlighter from "react-highlight-words";
 
 type Conversation = {
   id: string;
@@ -86,7 +87,12 @@ const handleSelectUser = async (user: User) => {
         onClick={() => handleSelectUser(user)}
         className="p-2 hover:bg-zinc-800 cursor-pointer"
       >
-        {user.username}
+        <Highlighter
+            highlightClassName="bg-yellow-400 text-black"
+            searchWords={[search]}
+            autoEscape={true}
+            textToHighlight={user.username}
+        />
       </div>
     ))
   ) : (
