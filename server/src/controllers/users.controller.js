@@ -26,7 +26,7 @@ export async function searchUsers(req, res) {
       `SELECT id, username 
        FROM users
        WHERE username ILIKE $1`,
-      [`%${query}%`]
+      [`${query}%`]
     );
 
     res.json(users.rows);

@@ -9,7 +9,7 @@ export async function getConversations(){
 }
 
 export async function getUsers(query: string){
-    const res = await fetch('http://localhost:3001/users',{
+    const res = await fetch(`http://localhost:3001/users/search?query=${query}`,{
         credentials: "include",
     });
 
