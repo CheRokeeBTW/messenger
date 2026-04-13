@@ -8,6 +8,7 @@ import { socketHandler } from './sockets/socketHandler.js';
 import authRoutes from "./routes/auth.routes.js";
 import conversationRoutes from "./routes/converstation.routes.js";
 import messageRoutes from './routes/message.routes.js';
+import cookieParser from "cookie-parser";
 
 async function testDB() {
   try {
@@ -29,11 +30,13 @@ const app = express();
 app.use(
     cors({
     origin: "http://localhost:3000", 
-    methods: ["GET", "POST", "PUT", "DELETE"], 
+    credentials: true
   })
 );
 
 app.use(express.json());
+
+app.use(cookieParser());
 
 //auth
 app.use("/auth", authRoutes);

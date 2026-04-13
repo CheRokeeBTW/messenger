@@ -17,7 +17,8 @@ export async function registerUser(email: string, username: string, password: st
 export async function loginUser(email: string, password: string){
     const res = await fetch('http://localhost:3001/auth/login',{
         method: "POST",
-        headers: { "Content-Type":"application/json"} ,
+        headers: { "Content-Type":"application/json"},
+        credentials: "include",
         body: JSON.stringify( {email, password} ),
     })
 
@@ -28,4 +29,16 @@ export async function loginUser(email: string, password: string){
     }
 
     return data
+}
+
+export async function checkAuth(){
+      const res = await fetch("http://localhost:3001/auth/me", {
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error();
+
+      const user = await res.json();
+      console.log("User:", user);
+      return user;
 }

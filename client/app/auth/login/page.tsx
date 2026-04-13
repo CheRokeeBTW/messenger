@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser } from "@/app/services/auth.services";
+import { loginUser, checkAuth } from "@/app/services/auth.services";
 
 export default function LoginPage(){
     const [email, setEmail] = useState<string>("");
@@ -9,7 +9,30 @@ export default function LoginPage(){
     const [password, setPassword] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isChecking, setIsChecking] = useState<boolean>(true);
     const router = useRouter();
+
+      useEffect(() => {
+        const isAuth = async () => {
+            try {
+            const data = await checkAuth();
+            router.push("/");
+            } catch {
+            router.push("/auth/login");
+            }
+            finally{
+                setIsChecking(false);
+            }
+        };
+
+        isAuth();
+}, []);
+
+if(isChecking) return(
+  <div className="flex justify-center items-center h-screen">
+    <div className="w-8 h-8 border-4 border-gray-300 border-t-white rounded-full animate-spin"></div>
+  </div>
+)
 
     const handleLogin = async() => {
         setIsLoading(true);

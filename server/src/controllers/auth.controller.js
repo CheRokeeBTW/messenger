@@ -70,8 +70,14 @@ export async function login(req, res) {
       { expiresIn: "7d" }
     );
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false, 
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
+    });
+
     res.json({
-      token,
       user: {
         id: user.rows[0].id,
         username: user.rows[0].username,
@@ -79,6 +85,26 @@ export async function login(req, res) {
       },
     });
 
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function getMe(req, res) {
+  try {
+    const userId = req.user.userId;
+
+    const user = await pool.query(
+      "SELECT id, username, email FROM users WHERE id = $1",
+      [userId]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user.rows[0]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
