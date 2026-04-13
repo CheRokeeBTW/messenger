@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.routes.js";
 import conversationRoutes from "./routes/converstation.routes.js";
 import messageRoutes from './routes/message.routes.js';
 import cookieParser from "cookie-parser";
+import userRoutes from './routes/users.routes.js';
 
 async function testDB() {
   try {
@@ -47,10 +48,13 @@ app.use("/conversations", conversationRoutes);
 //messages
 app.use("/messages", messageRoutes);
 
+app.use("/users", userRoutes);
+
 //does it work?
 app.get('/', (req, res) => {
   res.send('Messanger works')
 });
+
 
 app.get("/online-users", (req, res) => {
   res.json(Array.from(onlineUsers.keys()));

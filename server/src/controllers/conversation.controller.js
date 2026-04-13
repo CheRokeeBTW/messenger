@@ -39,15 +39,15 @@ for (const memberId of uniqueMembers) {
 
 }
 
-    for (const memberId of members) {
+    // for (const memberId of members) {
 
-      await pool.query(
-        `INSERT INTO conversation_members (user_id, conversation_id)
-         VALUES ($1,$2)`,
-        [memberId, conversationId]
-      );
+    //   await pool.query(
+    //     `INSERT INTO conversation_members (user_id, conversation_id)
+    //      VALUES ($1,$2)`,
+    //     [memberId, conversationId]
+    //   );
 
-    }
+    // }
 
     res.json({
       message: "Conversation created",
