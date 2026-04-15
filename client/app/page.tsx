@@ -5,9 +5,17 @@ import { useRouter } from "next/navigation";
 import { checkAuth } from "./services/auth.services";
 import Sidebar from "./components/Sidebar";
 
+type Conversation = {
+  id: string;
+  title: string | null;
+  is_group: boolean;
+  created_at: string;
+};
+
 export default function Home() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState<boolean>(true);
+  const [selectedChat, setSelectedChat] = useState<Conversation | null>(null);
 
   useEffect(() => {
   const isAuth = async () => {
@@ -33,7 +41,7 @@ if(isChecking) return(
   return (
     <div className="flex h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <div className="w-full h-full">
-        <Sidebar />
+        <Sidebar onSelectConversation = {setSelectedChat}/>
       </div>
     </div>
   );

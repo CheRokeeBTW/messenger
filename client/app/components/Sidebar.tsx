@@ -18,9 +18,13 @@ type User = {
     username: string
 }
 
-export default function Sidebar() {
+type SidebarProps = {
+  onSelectConversation: (conversation: Conversation) => void;
+};
+
+export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     const [chats, setChats] = useState<Conversation[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [search, setSearch] = useState("");
 
     useEffect(() =>{
@@ -57,10 +61,10 @@ export default function Sidebar() {
 
 const handleSelectUser = async (user: User) => {
     try{
-        await createConversation(user.id, user.username);
+        const newConversation = await createConversation(user.id, user.username);
 
-        const updated = await getConversations();
-        setChats(updated);
+        setChats((prev) => [...prev, newConversation]);
+        onSelectConversation(newConversation);
 
         setSearch("");
         setUsers([]);
@@ -97,7 +101,10 @@ const handleSelectUser = async (user: User) => {
     ))
   ) : (
     chats.map((chat) => (
-      <div key={chat.id} className="p-2">
+      <div key={chat.id}
+       className="p-2"
+       onClick={() => onSelectConversation(chat)}
+       >
         {chat.title || "chat title"}
       </div>
     ))

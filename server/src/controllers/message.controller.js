@@ -19,7 +19,6 @@ export async function sendMessage(req, res) {
       });
     }
 
-
     const message = await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, content)
        VALUES ($1,$2,$3)
