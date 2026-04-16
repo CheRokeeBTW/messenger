@@ -6,7 +6,6 @@ export async function sendMessage(req, res) {
     const { conversationId, content } = req.body;
     const senderId = req.user.userId;
 
-
     const memberCheck = await pool.query(
       `SELECT * FROM conversation_members
        WHERE user_id = $1 AND conversation_id = $2`,
@@ -56,7 +55,6 @@ export async function getMessages(req, res) {
         message: "Access denied"
       });
     }
-
 
     const messages = await pool.query(
       `SELECT * FROM messages

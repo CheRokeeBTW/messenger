@@ -55,7 +55,6 @@ app.get('/', (req, res) => {
   res.send('Messanger works')
 });
 
-
 app.get("/online-users", (req, res) => {
   res.json(Array.from(onlineUsers.keys()));
 });
