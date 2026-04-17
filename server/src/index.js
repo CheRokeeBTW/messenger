@@ -50,7 +50,6 @@ app.use("/messages", messageRoutes);
 
 app.use("/users", userRoutes);
 
-//does it work?
 app.get('/', (req, res) => {
   res.send('Messanger works')
 });
@@ -64,7 +63,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
     origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true,
   }
 });
 

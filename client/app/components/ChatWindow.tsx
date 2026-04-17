@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { getMessages, sendMessages } from "../services/messages.services";
 import { useSelector } from "react-redux";
+import { socket } from "../services/socket";
 
 type Conversation = {
   id: string;
@@ -23,7 +24,24 @@ type Message = {
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [message, setMessage] = useState<string>("");
     const [chats, setChats] = useState<Message[]>([]);
-    const user = useSelector((state: any) => state.auth.user)
+    const user = useSelector((state: any) => state.auth.user);
+
+        useEffect(() => {
+            if (!selectedChat) return;
+
+            socket.emit("join_conversation", selectedChat.id);
+
+        }, [selectedChat]);
+
+        useEffect(() => {
+            socket.on("receive_message", (message) => {
+                setChats((prev) => [...prev, message]);
+            });
+
+            return () => {
+                socket.off("receive_message");
+            };
+        }, []);
 
         useEffect(() => {
             if(!selectedChat) return
@@ -45,7 +63,13 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             if (!message.trim()) return;
             try{
                 const newMessage = await sendMessages(selectedChat?.id, message);
-                setChats((prev) => [...prev, newMessage]);
+                // setChats((prev) => [...prev, newMessage]);
+
+                socket.emit("send_message", {
+                    conversationId: selectedChat?.id,
+                    message: newMessage,
+                });
+
                 setMessage("");
             } catch (err){
                 console.error(err);
@@ -73,12 +97,18 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                             ) : (
                             chats.map((m) => (
                                 <div key={m.id}
-                                className={`${m.sender_id === user.id 
-                                    ? "bg-zinc-600"
-                                    : "bg-green-600"
+                                className={` flex ${m.sender_id === user.id 
+                                    ? "justify-end" 
+                                    : "justify-start"
                                 }`}
                                 >
+                                <div
+                                 className={`${m.sender_id === user.id 
+                                    ? "bg-green-600 mb-2 max-w-[50%] px-3 py-2 rounded-lg" 
+                                    : "bg-gray-600 mb-2 max-w-[50%] px-3 py-2 rounded-lg"
+                                }`}>
                                 {m.content}
+                                </div>
                                 </div>
                             ))
                             )}

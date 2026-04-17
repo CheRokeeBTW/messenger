@@ -59,7 +59,7 @@ export async function getMessages(req, res) {
     const messages = await pool.query(
       `SELECT * FROM messages
        WHERE conversation_id = $1
-       ORDER BY created_at DESC
+       ORDER BY created_at ASC
        LIMIT 50`,
       [conversationId]
     );

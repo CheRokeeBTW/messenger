@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import cookie from "cookie";
 
 const onlineUsers = new Map();
 
@@ -7,7 +8,10 @@ export function socketHandler(io) {
   io.on("connection", (socket) => {
 
     try {
-      const token = socket.handshake.auth.token;
+      const cookies = cookie.parse(socket.handshake.headers.cookie || "");
+      const token = cookies.token;
+
+      if (!token) throw new Error("No token");
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
