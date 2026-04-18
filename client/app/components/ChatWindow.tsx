@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getMessages, sendMessages } from "../services/messages.services";
 import { useSelector } from "react-redux";
 import { socket } from "../services/socket";
@@ -24,12 +24,15 @@ type Message = {
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [message, setMessage] = useState<string>("");
     const [chats, setChats] = useState<Message[]>([]);
+    const [isTyping, setIsTyping] = useState<boolean>(false);
+    const [typingUsers, setTypingUsers] = useState<string[]>([]);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const user = useSelector((state: any) => state.auth.user);
 
         useEffect(() => {
             if (!selectedChat) return;
 
-            socket.emit("join_conversation", selectedChat.id);
+            socket.emit("join_conversation", selectedChat?.id);
 
         }, [selectedChat]);
 
@@ -74,8 +77,49 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             } catch (err){
                 console.error(err);
             }
-        }
+        };
 
+        //kinda need to add typing effect for users
+        useEffect(() => {
+            const handleUserTyping = (userId: string) => {
+                setTypingUsers((prev) => {
+                if (prev.includes(userId)) return prev;
+                return [...prev, userId];
+                });
+            };
+
+            const handleUserStopTyping = (userId: string) => {
+                setTypingUsers((prev) => prev.filter((id) => id !== userId));
+            };
+
+            socket.on("user_typing", handleUserTyping);
+            socket.on("user_stop_typing", handleUserStopTyping);
+
+            return () => {
+                socket.off("user_typing", handleUserTyping);
+                socket.off("user_stop_typing", handleUserStopTyping);
+            };
+        }, [])
+
+        const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+            setMessage(e.target.value)
+
+            if (!selectedChat?.id) return;
+
+            if (!isTyping) {
+                setIsTyping(true);
+                socket.emit('typing', selectedChat.id);
+            }
+
+            if (timerRef.current) {
+                clearTimeout(timerRef.current)
+            }
+
+            timerRef.current = setTimeout(() => {
+                setIsTyping(false);
+                socket.emit('stop_typing', selectedChat.id);
+            }, 2000);
+        }
         console.log(chats)
 
     return(
@@ -113,12 +157,17 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                             ))
                             )}
                         </div>
+                        {typingUsers.length > 0 && (
+                        <div className="text-sm text-gray-400 px-2">
+                            {user.username} is typing...
+                        </div>
+                        )}
                         <div className="h-12 bg-gray-800 flex items-center px-2">
                             <input
                             type="text"
                             placeholder="Write a message"
                             value={message}
-                            onChange={(e) => setMessage(e.target.value)}
+                            onChange={handleTyping}
                             className="w-full"
                             />
                             <button

@@ -39,6 +39,14 @@ export function socketHandler(io) {
       socket.to(conversationId).emit("user_stop_typing", userId);
     });
 
+    //   socket.on("user_typing", (conversationId) => {
+    //     socket.to(conversationId).emit("user_typing", userId);
+    //   });
+
+    // socket.on("user_stop_typing", (conversationId) => {
+    //   socket.to(conversationId).emit("user_stop_typing", userId);
+    // });
+
       socket.on("disconnect", () => {
         onlineUsers.delete(userId);
 

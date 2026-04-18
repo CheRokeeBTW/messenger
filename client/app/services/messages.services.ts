@@ -1,5 +1,5 @@
-export async function getMessages(conversationID: string | undefined){
-    const res = await fetch(`http://localhost:3001/messages/${conversationID}`,{
+export async function getMessages(conversationId: string | number | undefined){
+    const res = await fetch(`http://localhost:3001/messages/${conversationId}`,{
         credentials: "include",
     });
 
@@ -8,12 +8,12 @@ export async function getMessages(conversationID: string | undefined){
     return res.json();
 }
 
-export async function sendMessages(conversationID: string | undefined, content: string){
+export async function sendMessages(conversationId: string | undefined, content: string){
     const res = await fetch(`http://localhost:3001/messages/`,{
         method: "POST",
         headers: { "Content-Type":"application/json" },
         credentials: "include",
-        body: JSON.stringify({conversationId: conversationID, content: content}),
+        body: JSON.stringify({conversationId: conversationId, content: content}),
     });
 
     if(!res.ok) throw new Error();
