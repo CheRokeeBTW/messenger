@@ -1,15 +1,20 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 import { getConversations, getUsers, createConversation } from "../services/chat.services";
 import Highlighter from "react-highlight-words";
+import { useSelector } from "react-redux";
+
+type Participant = {
+  id: string;
+  username: string;
+}
 
 type Conversation = {
   id: string;
-  title: string | null;
   is_group: boolean;
   created_at: string;
+  participants: Participant[];
 };
 
 type User = {
@@ -26,12 +31,14 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     const [chats, setChats] = useState<Conversation[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [search, setSearch] = useState("");
+    const user = useSelector((state: any) => state.auth.user);
 
-    useEffect(() =>{
+    useEffect(() => {
         const getChats = async () => {
             try{
                 const res = await getConversations();
                 setChats(res);
+                console.log('test', res)
             }
             catch (err){
                 console.error(err)
@@ -61,9 +68,10 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
 
 const handleSelectUser = async (user: User) => {
     try{
-        const newConversation = await createConversation(user.id, user.username);
+        const newConversation = await createConversation([user.id]);
+        const res = await getConversations();
 
-        setChats((prev) => [...prev, newConversation]);
+        setChats(res);
         onSelectConversation(newConversation);
 
         setSearch("");
@@ -100,14 +108,18 @@ const handleSelectUser = async (user: User) => {
       </div>
     ))
   ) : (
-    chats.map((chat) => (
+    chats.map((chat) => {
+      const otherUser = chat.participants?.find(
+    (u) => u.id !== user.id
+  );
+      return (
       <div key={chat.id}
        className="p-2"
        onClick={() => onSelectConversation(chat)}
        >
-        {chat.title || "chat title"}
+        { otherUser?.username || "unknown"}
       </div>
-    ))
+    )})
   )}
 </div>
     </div>

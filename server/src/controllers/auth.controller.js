@@ -62,19 +62,24 @@ export async function login(req, res) {
       return res.status(401).json({
         message: "Invalid password",
       });
-    }
+    };
+
+    console.log("TOKEN DATA", user.rows[0]);
 
     const token = jwt.sign(
-      { userId: user.rows[0].id },
+      { 
+        userId: user.rows[0].id,
+        username: user.rows[0].username
+       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "1d" }
     );
 
     res.cookie("token", token, {
       httpOnly: true,
       secure: false, 
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, 
+      maxAge: 1 * 24 * 60 * 60 * 1000, 
     });
 
     res.json({
@@ -108,5 +113,20 @@ export async function getMe(req, res) {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function logout(req,res) {
+  try{
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: false, //change later to true for prod
+      sameSite: "lax",
+    });
+
+    return res.json({ message: "LOGGED OUT" })
+  } catch(error){
+    console.error(error);
+    res.status(500).json({ message: "SERVER ERROR" });
   }
 }

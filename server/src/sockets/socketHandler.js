@@ -32,7 +32,11 @@ export function socketHandler(io) {
       });
 
       socket.on("typing", (conversationId) => {
-        socket.to(conversationId).emit("user_typing", userId);
+       console.log("DECODED TOKEN:", decoded);
+        socket.to(conversationId).emit("user_typing", {
+          id: userId,
+          username: decoded.username
+      });
       });
 
     socket.on("stop_typing", (conversationId) => {

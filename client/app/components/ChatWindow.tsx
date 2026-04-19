@@ -4,11 +4,16 @@ import { getMessages, sendMessages } from "../services/messages.services";
 import { useSelector } from "react-redux";
 import { socket } from "../services/socket";
 
+type Participant = {
+  id: string;
+  username: string;
+}
+
 type Conversation = {
   id: string;
-  title: string | null;
   is_group: boolean;
   created_at: string;
+  participants: Participant[];
 };
 
 type ChatWindowProps = {
@@ -21,13 +26,22 @@ type Message = {
   sender_id: string;
 };
 
+type TypingUser = {
+    id: string;
+    username: string;
+}
+
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [message, setMessage] = useState<string>("");
     const [chats, setChats] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
-    const [typingUsers, setTypingUsers] = useState<string[]>([]);
+    const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const user = useSelector((state: any) => state.auth.user);
+    const user = useSelector((state: any) => state.auth.user); //remove any
+    const logout = useSelector((state:any) => state.auth.logout);
+    const otherUser = selectedChat?.participants.find(
+        (u) => u.id !== user.id
+    );
 
         useEffect(() => {
             if (!selectedChat) return;
@@ -81,15 +95,16 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
 
         //kinda need to add typing effect for users
         useEffect(() => {
-            const handleUserTyping = (userId: string) => {
+            const handleUserTyping = (data: TypingUser) => {
+                if (user.id === data.id) return;
                 setTypingUsers((prev) => {
-                if (prev.includes(userId)) return prev;
-                return [...prev, userId];
-                });
+                if (prev.find(u => u.id === data.id)) return prev;
+                return [...prev, data];
+            });
             };
 
-            const handleUserStopTyping = (userId: string) => {
-                setTypingUsers((prev) => prev.filter((id) => id !== userId));
+           const handleUserStopTyping = (userId: string) => {
+                setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
             };
 
             socket.on("user_typing", handleUserTyping);
@@ -120,7 +135,8 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 socket.emit('stop_typing', selectedChat.id);
             }, 2000);
         }
-        console.log(chats)
+
+        console.log(selectedChat, 'selectedChat')
 
     return(
         <div className="flex w-full h-full">
@@ -133,7 +149,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 : (
                     <div className="flex flex-col w-full">
                         <div className="w-full h-12 bg-zinc-700 items-center justify-center flex">
-                            {selectedChat.title}
+                            {otherUser?.username || "unknown"}
                         </div>
                         <div className="flex flex-col flex-1 overflow-y-auto">
                           {chats.length === 0 ? (
@@ -159,7 +175,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                         </div>
                         {typingUsers.length > 0 && (
                         <div className="text-sm text-gray-400 px-2">
-                            {user.username} is typing...
+                            {typingUsers.map(u => u.username).join(", ")} is typing...
                         </div>
                         )}
                         <div className="h-12 bg-gray-800 flex items-center px-2">

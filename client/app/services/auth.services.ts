@@ -31,6 +31,19 @@ export async function loginUser(email: string, password: string){
     return data
 }
 
+export async function logoutUser(){
+    const res = await fetch('http://localhost:3001/auth/logout',{
+        method: "POST",
+        credentials: "include",
+    })
+
+    const data = await res.json();
+
+    if(!res.ok){
+        throw new Error(data.message || "Failed to logout");
+    }
+}
+
 export async function checkAuth(){
       const res = await fetch("http://localhost:3001/auth/me", {
         credentials: "include",

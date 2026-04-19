@@ -18,12 +18,12 @@ export async function getUsers(query: string){
     return res.json();
 }
 
-export async function createConversation(memberId: string, username: string){
+export async function createConversation(memberId: string[]){
     const res = await fetch('http://localhost:3001/conversations',{
         method: "POST",
         headers: { "Content-Type":"application/json" },
         credentials: "include",
-        body: JSON.stringify({members: [memberId], title: username, is_group: false}),
+        body: JSON.stringify({ members: memberId, is_group: false }),
     });
 
     if(!res.ok) throw new Error();

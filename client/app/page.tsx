@@ -2,17 +2,22 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkAuth } from "./services/auth.services";
+import { checkAuth, logoutUser } from "./services/auth.services";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import { useDispatch, UseDispatch } from "react-redux";
-import { setUser } from "./redux/slices/authSlice";
+import { setUser, logout } from "./redux/slices/authSlice";
+
+type Participant = {
+  id: string;
+  username: string;
+}
 
 type Conversation = {
   id: string;
-  title: string | null;
   is_group: boolean;
   created_at: string;
+  participants: Participant[];
 };
 
 export default function Home() {
@@ -36,6 +41,19 @@ export default function Home() {
 
   isAuth();
 }, []);
+
+// useEffect(() => {
+//   const logoutU = async () => {
+//     try {
+//       const data = await logoutUser();
+//       dispatch(logout());
+//     } catch{
+//       console.error('Fail to logout')
+//     } 
+//   };
+
+//   logoutU();
+// }, []);
 
 console.log(selectedChat)
 
