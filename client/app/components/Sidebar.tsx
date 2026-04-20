@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { getConversations, getUsers, createConversation } from "../services/chat.services";
 import Highlighter from "react-highlight-words";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../redux/store";
+import { setUnread } from "../redux/slices/chatSlice";
 
 type Participant = {
   id: string;
@@ -21,7 +23,7 @@ type User = {
     email: string;
     id: string;
     username: string
-}
+};
 
 type SidebarProps = {
   onSelectConversation: (conversation: Conversation) => void;
@@ -31,14 +33,22 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     const [chats, setChats] = useState<Conversation[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [search, setSearch] = useState("");
+    const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
     const user = useSelector((state: any) => state.auth.user);
+    const dispatch = useDispatch();
+
+    console.log(messageNotifications, "message Notifications final")
 
     useEffect(() => {
         const getChats = async () => {
             try{
                 const res = await getConversations();
                 setChats(res);
-                console.log('test', res)
+                const newObject: any = {};
+                for(let r of res){
+                  newObject[r.id] = Number(r.unread_count)
+                }
+                dispatch(setUnread(newObject));
             }
             catch (err){
                 console.error(err)
@@ -66,6 +76,8 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         fetchUsers();
 }, [search]);
 
+console.log('chats are', chats);
+
 const handleSelectUser = async (user: User) => {
     try{
         const newConversation = await createConversation([user.id]);
@@ -79,7 +91,7 @@ const handleSelectUser = async (user: User) => {
     } catch (err){
         console.error(err);
     }
-}
+};
 
   return (
     <div className="w-72 bg-zinc-900 h-full flex flex-col">
@@ -117,7 +129,7 @@ const handleSelectUser = async (user: User) => {
        className="p-2"
        onClick={() => onSelectConversation(chat)}
        >
-        { otherUser?.username || "unknown"}
+        { otherUser?.username || "unknown"} : {messageNotifications[chat.id] || 0}
       </div>
     )})
   )}

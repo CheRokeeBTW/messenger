@@ -54,7 +54,7 @@ export async function getMessages(req, res) {
       return res.status(403).json({
         message: "Access denied"
       });
-    }
+    };
 
     const messages = await pool.query(
       `SELECT * FROM messages
@@ -63,6 +63,22 @@ export async function getMessages(req, res) {
        LIMIT 50`,
       [conversationId]
     );
+
+    await pool.query(
+  `
+  INSERT INTO message_reads (message_id, user_id)
+  SELECT m.id, $1
+  FROM messages m
+  WHERE m.conversation_id = $2
+    AND m.sender_id != $1
+    AND NOT EXISTS (
+      SELECT 1 FROM message_reads r
+      WHERE r.message_id = m.id
+        AND r.user_id = $1
+    )
+  `,
+  [userId, conversationId]
+);
 
     res.json(messages.rows);
 

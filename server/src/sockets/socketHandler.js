@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import cookie from "cookie";
+import { pool } from "../config/db.js";
 
 const onlineUsers = new Map();
 
@@ -19,6 +20,8 @@ export function socketHandler(io) {
 
       onlineUsers.set(userId, socket.id);
 
+      socket.join(userId);
+
       console.log("User connected:", userId);
 
       socket.broadcast.emit("user_online", userId);
@@ -27,8 +30,17 @@ export function socketHandler(io) {
         socket.join(conversationId);
       });
 
-      socket.on("send_message", ({ conversationId, message }) => {
+      socket.on("send_message", async ({ conversationId, message, sender}) => {
+           const otherUsers = await pool.query(
+              `SELECT user_id FROM conversation_members
+              WHERE conversation_id = $1 AND user_id != $2`,
+              [conversationId, sender]
+            );
+        console.log(otherUsers.rows, 'participants ids');
         io.to(conversationId).emit("receive_message", message);
+        for (const user of otherUsers.rows){
+          io.to(user.user_id).emit("message_notification", conversationId, message, sender);
+        }
       });
 
       socket.on("typing", (conversationId) => {

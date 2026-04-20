@@ -122,31 +122,51 @@ export async function getUserConversations(req, res) {
 
     const userId = req.user.userId;
 
-    const conversations = await pool.query(
-      `
-      SELECT 
-        c.id,
-        c.is_group,
-        c.created_at,
-        json_agg(
-          json_build_object(
-            'id', u.id,
-            'username', u.username
-          )
-        ) AS participants
-      FROM conversations c
-      JOIN conversation_members cm ON cm.conversation_id = c.id
-      JOIN users u ON u.id = cm.user_id
-      WHERE c.id IN (
-        SELECT conversation_id
-        FROM conversation_members
-        WHERE user_id = $1
+  const conversations = await pool.query(
+  `
+  SELECT 
+    c.id,
+    c.is_group,
+    c.created_at,
+
+    json_agg(
+      json_build_object(
+        'id', u.id,
+        'username', u.username
       )
-      GROUP BY c.id
-      ORDER BY c.created_at DESC
-      `,
-      [userId]
-    );
+    ) AS participants,
+
+    COUNT(m.id) FILTER (
+      WHERE m.sender_id != $1
+      AND r.message_id IS NULL
+    ) AS unread_count
+
+  FROM conversations c
+
+  JOIN conversation_members cm 
+    ON cm.conversation_id = c.id
+
+  JOIN users u 
+    ON u.id = cm.user_id
+
+  LEFT JOIN messages m 
+    ON m.conversation_id = c.id
+
+  LEFT JOIN message_reads r 
+    ON r.message_id = m.id 
+    AND r.user_id = $1
+
+  WHERE c.id IN (
+    SELECT conversation_id
+    FROM conversation_members
+    WHERE user_id = $1
+  )
+
+  GROUP BY c.id
+  ORDER BY c.created_at DESC
+  `,
+  [userId]
+);
 
     res.json(conversations.rows);
 
