@@ -4,7 +4,7 @@ import { getMessages, sendMessages } from "../services/messages.services";
 import { useDispatch, useSelector } from "react-redux";
 import { socket } from "../services/socket";
 import { RootState } from "../redux/store";
-import { incrementUnread } from "../redux/slices/chatSlice";
+import { incrementUnread, clearUnread } from "../redux/slices/chatSlice";
 
 type Participant = {
   id: string;
@@ -33,6 +33,12 @@ type TypingUser = {
     username: string;
 };
 
+type Notification = {
+    conversationId: string;
+    message: string;
+    sender: string;
+}
+
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [message, setMessage] = useState<string>("");
     const [chats, setChats] = useState<Message[]>([]);
@@ -40,22 +46,28 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const user = useSelector((state: any) => state.auth.user); //remove any
-    // const incrementUnread = useSelector((state: RootState) => state.chat.unreadMessages);
     const logout = useSelector((state:any) => state.auth.logout);
     const dispatch = useDispatch();
+    const selectedChatRef = useRef(selectedChat);
     const otherUser = selectedChat?.participants.find(
         (u) => u.id !== user.id  
     );
     const otherUserId = otherUser?.id;
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
 
-    console.log(otherUserId, "other user")
+    console.log(otherUserId, "other user");
+
+        useEffect(() => {
+            selectedChatRef.current = selectedChat;
+        }, [selectedChat]);
 
         useEffect(() => {
             if (!selectedChat) return;
 
             socket.emit("join_conversation", selectedChat?.id);
-
+             if (selectedChat?.id){ 
+                dispatch(clearUnread(selectedChat?.id));
+            }
         }, [selectedChat]);
 
         useEffect(() => {
@@ -69,15 +81,14 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
         }, []);
 
         useEffect(() => {
-            socket.on("message_notification", (conversationId, message, sender) => {
-                if (selectedChat?.id !== conversationId){ 
-                    console.log(conversationId, "conversationId for testing message notification");
+            const handleNotification = (conversationId: string, message: string, sender: string) => {
+                if (selectedChatRef.current?.id !== conversationId){
                     dispatch(incrementUnread(conversationId));
-                }
-            });
-
+                };
+            };
+            socket.on("message_notification", (handleNotification))
             return () => {
-                socket.off("message_notification")
+                socket.off("message_notification", handleNotification);
             }
         }, []);
 
@@ -102,7 +113,6 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             try{
                 if (!selectedChat?.id) return;
                 const newMessage = await sendMessages(selectedChat?.id, message);
-                // setChats((prev) => [...prev, newMessage]);
 
                 socket.emit("send_message", {
                     conversationId: selectedChat?.id,
@@ -125,10 +135,6 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 return [...prev, data];
             });
             };
-
-            const handleNotifications = () => {
-
-            }
 
            const handleUserStopTyping = (userId: string) => {
                 setTypingUsers((prev) => prev.filter((u) => u.id !== userId));

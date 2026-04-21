@@ -16,8 +16,7 @@ const chatSlice = createSlice({
         state.unreadMessages[id] += 1;
     },
     setUnread: (state, action) => {
-      const id = action.payload;
-      state.unreadMessages = action.payload;
+      state.unreadMessages = action.payload; 
     },
     clearUnread: (state, action) => {
         const id = action.payload;
