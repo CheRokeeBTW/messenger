@@ -145,7 +145,31 @@ export async function getUserConversations(req, res) {
               WHERE r.message_id = m.id
                 AND r.user_id = $1
             )
-        ) AS unread_count
+        ) AS unread_count,
+
+        (
+          SELECT m.content
+          FROM messages m
+          WHERE m.conversation_id = c.id
+          ORDER BY m.created_at DESC
+          LIMIT 1
+        ) AS last_message,
+
+        (
+          SELECT m.created_at
+          FROM messages m
+          WHERE m.conversation_id = c.id
+          ORDER BY m.created_at DESC
+          LIMIT 1
+        ) AS last_message_time,
+
+        (
+          SELECT m.sender_id
+          FROM messages m
+          WHERE m.conversation_id = c.id
+          ORDER BY m.created_at DESC
+          LIMIT 1
+        ) AS last_sender_id
 
       FROM conversations c
 
@@ -162,7 +186,7 @@ export async function getUserConversations(req, res) {
       )
 
       GROUP BY c.id
-      ORDER BY c.created_at DESC
+      ORDER BY last_message_time DESC NULLS LAST
       `,
       [userId]
     );

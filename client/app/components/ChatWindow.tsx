@@ -4,7 +4,7 @@ import { getMessages, sendMessages } from "../services/messages.services";
 import { useDispatch, useSelector } from "react-redux";
 import { socket } from "../services/socket";
 import { RootState } from "../redux/store";
-import { incrementUnread, clearUnread } from "../redux/slices/chatSlice";
+import { incrementUnread, clearUnread, setLastMessage } from "../redux/slices/chatSlice";
 
 type Participant = {
   id: string;
@@ -16,6 +16,9 @@ type Conversation = {
   is_group: boolean;
   created_at: string;
   participants: Participant[];
+  last_message: string;
+  last_message_time: string;
+  last_sender_id: string;
 };
 
 type ChatWindowProps = {
@@ -33,20 +36,15 @@ type TypingUser = {
     username: string;
 };
 
-type Notification = {
-    conversationId: string;
-    message: string;
-    sender: string;
-}
-
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [message, setMessage] = useState<string>("");
-    const [chats, setChats] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const user = useSelector((state: any) => state.auth.user); //remove any
     const logout = useSelector((state:any) => state.auth.logout);
+    // const chats = useSelector((state: RootState) => state.chat.chats)
     const dispatch = useDispatch();
     const selectedChatRef = useRef(selectedChat);
     const otherUser = selectedChat?.participants.find(
@@ -71,8 +69,12 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
         }, [selectedChat]);
 
         useEffect(() => {
-            socket.on("receive_message", (message) => {
-                setChats((prev) => [...prev, message]);
+            socket.on("receive_message", ({ conversationId, message }) => {
+                dispatch(setLastMessage({ conversationId, message }));
+                
+                if(selectedChatRef.current?.id === conversationId){
+                    setMessages((prev) => [...prev, message]);
+                }
             });
 
             return () => {
@@ -85,6 +87,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 if (selectedChatRef.current?.id !== conversationId){
                     dispatch(incrementUnread(conversationId));
                 };
+                dispatch(setLastMessage({ conversationId, message }))
             };
             socket.on("message_notification", (handleNotification))
             return () => {
@@ -97,7 +100,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             const getChats = async () => {
                 try{
                     const res = await getMessages(selectedChat?.id);
-                    setChats(Array.isArray(res) ? res : []);
+                    setMessages(Array.isArray(res) ? res : []);
                     console.log("messages response:", res);
                 }
                 catch (err){
@@ -113,6 +116,11 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             try{
                 if (!selectedChat?.id) return;
                 const newMessage = await sendMessages(selectedChat?.id, message);
+                
+                dispatch(setLastMessage({
+                    conversationId: selectedChat.id,
+                    message: newMessage,
+                }));
 
                 socket.emit("send_message", {
                     conversationId: selectedChat?.id,
@@ -185,10 +193,10 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                             {otherUser?.username || "unknown"}
                         </div>
                         <div className="flex flex-col flex-1 overflow-y-auto">
-                          {chats.length === 0 ? (
+                          {messages.length === 0 ? (
                             <span>Start messaging</span>
                             ) : (
-                            chats.map((m) => (
+                            messages.map((m) => (
                                 <div key={m.id}
                                 className={` flex ${m.sender_id === user.id 
                                     ? "justify-end" 

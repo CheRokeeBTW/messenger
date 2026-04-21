@@ -37,7 +37,10 @@ export function socketHandler(io) {
               [conversationId, sender]
             );
         console.log(otherUsers.rows, 'participants ids');
-        io.to(conversationId).emit("receive_message", message);
+        io.to(conversationId).emit("receive_message", {
+          conversationId,
+          message,
+      });
         for (const user of otherUsers.rows){
           io.to(user.user_id).emit("message_notification", conversationId, message, sender);
         }

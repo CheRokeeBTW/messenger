@@ -5,7 +5,7 @@ import { getConversations, getUsers, createConversation } from "../services/chat
 import Highlighter from "react-highlight-words";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../redux/store";
-import { setUnread } from "../redux/slices/chatSlice";
+import { setUnread, setChats } from "../redux/slices/chatSlice";
 
 type Participant = {
   id: string;
@@ -17,6 +17,9 @@ type Conversation = {
   is_group: boolean;
   created_at: string;
   participants: Participant[];
+  last_message: string;
+  last_message_time: string;
+  last_sender_id: string;
 };
 
 type User = {
@@ -30,7 +33,7 @@ type SidebarProps = {
 };
 
 export default function Sidebar( {onSelectConversation}: SidebarProps ) {
-    const [chats, setChats] = useState<Conversation[]>([]);
+    const chats = useSelector((state: RootState) => state.chat.chats)
     const [users, setUsers] = useState<User[]>([]);
     const [search, setSearch] = useState("");
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
@@ -43,11 +46,12 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         const getChats = async () => {
             try{
                 const res = await getConversations();
-                setChats(res);
+                dispatch(setChats(res));
                 const newObject: any = {};
                 for(let r of res){
                   newObject[r.id] = Number(r.unread_count)
-                }
+                };
+                console.log('CONVERSATIONS:', res);
                 dispatch(setUnread(newObject));
             }
             catch (err){
@@ -83,7 +87,7 @@ const handleSelectUser = async (user: User) => {
         const newConversation = await createConversation([user.id]);
         const res = await getConversations();
 
-        setChats(res);
+        dispatch(setChats(res));
         onSelectConversation(newConversation);
 
         setSearch("");
@@ -94,11 +98,11 @@ const handleSelectUser = async (user: User) => {
 };
 
   return (
-    <div className="w-72 bg-zinc-900 h-full flex flex-col">
+    <div className="w-96 bg-white h-full flex flex-col">
       <div className="p-2">
         <input
           placeholder="Search..."
-          className="w-full p-2 rounded bg-zinc-800"
+          className="w-full p-2 rounded bg-white placeholder-gray-500 border-none "
           value = {search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -109,7 +113,7 @@ const handleSelectUser = async (user: User) => {
       <div
         key={user.id}
         onClick={() => handleSelectUser(user)}
-        className="p-2 hover:bg-zinc-800 cursor-pointer"
+        className="p-2 hover:bg-gray-200 cursor-pointer text-black"
       >
         <Highlighter
             highlightClassName="bg-yellow-400 text-black"
@@ -126,10 +130,11 @@ const handleSelectUser = async (user: User) => {
   );
       return (
       <div key={chat.id}
-       className="p-2"
+       className="p-2 text-black hover:cursor-pointer hover:bg-gray-200"
        onClick={() => onSelectConversation(chat)}
        >
         { otherUser?.username || "unknown"} : {messageNotifications[chat.id] || 0}
+        <p className="text-[0.75rem]">{chat?.last_message}</p>
       </div>
     )})
   )}

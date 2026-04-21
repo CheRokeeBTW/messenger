@@ -18,6 +18,9 @@ type Conversation = {
   is_group: boolean;
   created_at: string;
   participants: Participant[];
+  last_message: string;
+  last_message_time: string;
+  last_sender_id: string;
 };
 
 export default function Home() {
