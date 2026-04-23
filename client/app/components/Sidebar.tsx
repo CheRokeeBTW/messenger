@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getConversations, getUsers, createConversation } from "../services/chat.services";
 import Highlighter from "react-highlight-words";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import { setUnread, setChats } from "../redux/slices/chatSlice";
+import formatTime from "../helpers/formatTime";
 
 type Participant = {
   id: string;
@@ -39,8 +40,23 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
     const user = useSelector((state: any) => state.auth.user);
     const dispatch = useDispatch();
+    const today: number = Number(new Date().toISOString().slice(8,10).replaceAll("-",""));
+    let days: number;
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [, setTick] = useState(0);
 
-    console.log(messageNotifications, "message Notifications final")
+    timerRef.current = setTimeout(() => {timerRef.current}, 3000);
+
+    console.log(messageNotifications, "message Notifications final");
+
+    //need that to update last msg time every 60secs
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setTick(t => t + 1);
+      }, 60000);
+
+      return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const getChats = async () => {
@@ -62,6 +78,13 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         getChats();
     }, []);
 
+                // useEffect(() => { //REMOVE TOMORROW
+                //    for(let chat of chats){
+                //   days = today - Number(chat.last_message_time.slice(8,10).replaceAll("-",""))
+                //   console.log(days, "DAYS")
+                // }
+                // }, [timerRef.current])
+
     useEffect(() => {
         const fetchUsers = async () => {
             if (search.length < 2) {
@@ -78,24 +101,24 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         };
 
         fetchUsers();
-}, [search]);
+    }, [search]);
 
-console.log('chats are', chats);
+    console.log('chats are', chats);
 
-const handleSelectUser = async (user: User) => {
-    try{
-        const newConversation = await createConversation([user.id]);
-        const res = await getConversations();
+    const handleSelectUser = async (user: User) => {
+        try{
+            const newConversation = await createConversation([user.id]);
+            const res = await getConversations();
 
-        dispatch(setChats(res));
-        onSelectConversation(newConversation);
+            dispatch(setChats(res));
+            onSelectConversation(newConversation);
 
-        setSearch("");
-        setUsers([]);
-    } catch (err){
-        console.error(err);
-    }
-};
+            setSearch("");
+            setUsers([]);
+        } catch (err){
+            console.error(err);
+        }
+    };
 
   return (
     <div className="w-96 bg-white h-full flex flex-col">
@@ -133,7 +156,10 @@ const handleSelectUser = async (user: User) => {
        className="p-2 text-black hover:cursor-pointer hover:bg-gray-200"
        onClick={() => onSelectConversation(chat)}
        >
+        <div>
         { otherUser?.username || "unknown"} : {messageNotifications[chat.id] || 0}
+        <span>{chat.last_message_time ? formatTime(chat.last_message_time) : ""}</span>
+        </div>
         <p className="text-[0.75rem]">{chat?.last_message}</p>
       </div>
     )})
