@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import { setUnread, setChats } from "../redux/slices/chatSlice";
 import formatTime from "../helpers/formatTime";
+import searchImg from "../../public/search.png";
+import Image from "next/image";
 
 type Participant = {
   id: string;
@@ -78,13 +80,6 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         getChats();
     }, []);
 
-                // useEffect(() => { //REMOVE TOMORROW
-                //    for(let chat of chats){
-                //   days = today - Number(chat.last_message_time.slice(8,10).replaceAll("-",""))
-                //   console.log(days, "DAYS")
-                // }
-                // }, [timerRef.current])
-
     useEffect(() => {
         const fetchUsers = async () => {
             if (search.length < 2) {
@@ -122,10 +117,15 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
 
   return (
     <div className="w-96 bg-white h-full flex flex-col">
-      <div className="p-2">
+      <div className="py-3 pl-6 flex gap-4">
+        <Image 
+        src={searchImg} 
+        alt = "search"
+        className="w-[1.3rem] h-[1.3rem] "
+        />
         <input
           placeholder="Search..."
-          className="w-full p-2 rounded bg-white placeholder-gray-500 border-none "
+          className="w-full focus:outline-none rounded bg-white placeholder-gray-500 border-none text-black"
           value = {search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -153,14 +153,31 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
   );
       return (
       <div key={chat.id}
-       className="p-2 text-black hover:cursor-pointer hover:bg-gray-200"
+       className="flex justify-between p-2 px-6 text-black hover:cursor-pointer hover:bg-gray-200"
        onClick={() => onSelectConversation(chat)}
        >
-        <div>
-        { otherUser?.username || "unknown"} : {messageNotifications[chat.id] || 0}
-        <span>{chat.last_message_time ? formatTime(chat.last_message_time) : ""}</span>
+        <div className="flex flex-col">
+        <div className="flex">
+        <span className="font-bold">{ otherUser?.username || "unknown" }</span>
         </div>
-        <p className="text-[0.75rem]">{chat?.last_message}</p>
+        <div className="flex">
+        <span className="text-[0.75rem] text-nowrap text-zinc-600">
+          {chat?.last_message.length > 40 
+          ? (chat.last_message.slice(0,40) + "...")
+          : (chat.last_message)
+          }
+          </span>
+        </div>
+        </div>
+        <div className="flex w-full items-center">
+          { messageNotifications[chat.id]
+          ? (<span className="pl-1 rounded-full bg-blue-500 text-white w-[2rem]">+ {messageNotifications[chat.id]}</span>)
+          : ("")
+          }
+        </div>
+        <div className="flex items-center">
+          <span className="text-gray-400 text-[0.9rem]">{chat.last_message_time ? formatTime(chat.last_message_time) : ""}</span>
+        </div>
       </div>
     )})
   )}

@@ -5,6 +5,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { socket } from "../services/socket";
 import { RootState } from "../redux/store";
 import { incrementUnread, clearUnread, setLastMessage } from "../redux/slices/chatSlice";
+import Image from "next/image";
+import sendImg from "../../public/Send_icon.svg.png";
 
 type Participant = {
   id: string;
@@ -189,49 +191,57 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 )
                 : (
                     <div className="flex flex-col w-full">
-                        <div className="w-full h-12 bg-zinc-700 items-center justify-center flex">
+                        <div className="w-full h-12 bg-white items-center justify-center flex text-black">
                             {otherUser?.username || "unknown"}
                         </div>
-                        <div className="flex flex-col flex-1 overflow-y-auto">
+                        <div className="flex flex-col flex-1 overflow-y-auto bg-gray-200">
                           {messages.length === 0 ? (
                             <span>Start messaging</span>
                             ) : (
                             messages.map((m) => (
                                 <div key={m.id}
-                                className={` flex ${m.sender_id === user.id 
+                                className={`flex p-2 ${m.sender_id === user.id 
                                     ? "justify-end" 
                                     : "justify-start"
                                 }`}
                                 >
                                 <div
-                                 className={`${m.sender_id === user.id 
-                                    ? "bg-green-600 mb-2 max-w-[50%] px-3 py-2 rounded-lg" 
-                                    : "bg-gray-600 mb-2 max-w-[50%] px-3 py-2 rounded-lg"
+                                 className={`overflow-x-hidden max-w-[500px] ${m.sender_id === user.id 
+                                    ? "bg-white mb-2 max-w-[50%] px-3 py-2 rounded-lg text-black" 
+                                    : "bg-blue-500 mb-2 max-w-[50%] px-3 py-2 rounded-lg"
                                 }`}>
+                                <span className="break-words">
                                 {m.content}
+                                </span>
                                 </div>
                                 </div>
                             ))
                             )}
                         </div>
                         {typingUsers.length > 0 && (
-                        <div className="text-sm text-gray-400 px-2">
+                        <div className="text-sm text-black px-2 bg-gray-200">
                             {typingUsers.map(u => u.username).join(", ")} is typing...
                         </div>
                         )}
-                        <div className="h-12 bg-gray-800 flex items-center px-2">
+                        <div className="h-12 bg-white flex items-center px-2 text-black">
                             <input
                             type="text"
-                            placeholder="Write a message"
+                            placeholder="Type a message..."
                             value={message}
+                            onKeyDown={async (e) => {
+                                if (e.key !== 'Enter') return;
+                                e.preventDefault();
+                                handleSendMessage();
+                            }}
                             onChange={handleTyping}
-                            className="w-full"
+                            className="w-full focus:outline-none placeholder:text-zinc-500"
                             />
-                            <button
+                            <Image
                             onClick={handleSendMessage}
-                            >
-                                send
-                            </button>
+                            alt = "sendMsg"
+                            src = {sendImg}
+                            className="w-[1.3rem] h-[1.3rem] hover:cursor-pointer"
+                             />
                         </div>
                     </div>
                 )
