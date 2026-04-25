@@ -17,11 +17,21 @@ type Conversation = {
   last_sender_id: string;
 };
 
+type Message = {
+  id: string;
+  content: string;
+  sender_id: string;
+  read_by: string[];
+};
+
+type MessagesState = Record<string, Message[]>;
+
 const chatSlice = createSlice({
   name: "chat",
   initialState: {
     unreadMessages: <UnreadMessages> {},
     chats: [] as Conversation[],
+    // messages: {} as MessagesState,
   },
   reducers: {
     incrementUnread: (state, action) => {
@@ -52,6 +62,22 @@ const chatSlice = createSlice({
         const id = action.payload;
         state.unreadMessages[id] = 0;
     },
+    // markMessagesRead: (state, action) => {
+    //   const { conversationId, userId } = action.payload;
+
+    //   const messages = state.messages[conversationId];
+    //   if (!messages) return;
+
+    //   for (const msg of messages) {
+    //     if (!msg.read_by.includes(userId)) {
+    //       msg.read_by.push(userId);
+    //     }
+    //   }
+    // },
+    // setMessages: (state, action) => {
+    //   const { conversationId, messages } = action.payload;
+    //   state.messages[conversationId] = messages;
+    // }
   },
 });
 

@@ -56,13 +56,24 @@ export async function getMessages(req, res) {
       });
     };
 
-    const messages = await pool.query(
-      `SELECT * FROM messages
-       WHERE conversation_id = $1
-       ORDER BY created_at ASC
-       LIMIT 50`,
-      [conversationId]
-    );
+const messages = await pool.query(
+  `
+  SELECT 
+    m.*,
+    COALESCE(
+      json_agg(r.user_id) FILTER (WHERE r.user_id IS NOT NULL),
+      '[]'
+    ) AS read_by
+  FROM messages m
+  LEFT JOIN message_reads r 
+    ON r.message_id = m.id
+  WHERE m.conversation_id = $1
+  GROUP BY m.id
+  ORDER BY m.created_at DESC
+  LIMIT 50
+  `,
+  [conversationId]
+);
 
     await pool.query(
   `
@@ -91,4 +102,4 @@ export async function getMessages(req, res) {
     });
 
   }
-}
+};

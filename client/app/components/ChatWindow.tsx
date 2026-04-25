@@ -31,6 +31,7 @@ type Message = {
   id: string;
   content: string;
   sender_id: string;
+  read_by: string[];
 };
 
 type TypingUser = {
@@ -68,7 +69,24 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
              if (selectedChat?.id){ 
                 dispatch(clearUnread(selectedChat?.id));
             }
+
+                socket.emit("mark_read", {
+                    conversationId: selectedChat.id
+                });
         }, [selectedChat]);
+
+        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+            const el = e.currentTarget;
+
+            const isAtBottom =
+                el.scrollHeight - el.scrollTop === el.clientHeight;
+
+            if (isAtBottom && selectedChat?.id) {
+                socket.emit("mark_read", {
+                    conversationId: selectedChat.id
+                });
+            }
+        };
 
         useEffect(() => {
             socket.on("receive_message", ({ conversationId, message }) => {
@@ -102,7 +120,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             const getChats = async () => {
                 try{
                     const res = await getMessages(selectedChat?.id);
-                    setMessages(Array.isArray(res) ? res : []);
+                    setMessages(Array.isArray(res) ? res.reverse() : []);
                     console.log("messages response:", res);
                 }
                 catch (err){
@@ -112,6 +130,30 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     
             getChats();
         }, [selectedChat]);
+
+        useEffect(() => {
+            const handleMessagesRead = ({ conversationId, userId } : {conversationId: string | number | undefined, userId: string}) => {
+                if (selectedChatRef.current?.id !== conversationId) return;
+
+                setMessages(prev =>
+                    prev.map(msg => {
+                        if (!msg.read_by?.includes(userId)) {
+                            return {
+                                ...msg,
+                                read_by: [...(msg.read_by || []), userId],
+                            };
+                        }
+                        return msg;
+                    })
+                );
+            };
+
+            socket.on("messages_read", handleMessagesRead);
+
+            return () => {
+                socket.off("messages_read", handleMessagesRead);
+            };
+        }, []);
 
         const handleSendMessage = async () => {
             if (!message.trim()) return;
@@ -194,7 +236,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                         <div className="w-full h-12 bg-white items-center justify-center flex text-black">
                             {otherUser?.username || "unknown"}
                         </div>
-                        <div className="flex flex-col flex-1 overflow-y-auto bg-gray-200">
+                        <div onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto bg-gray-200">
                           {messages.length === 0 ? (
                             <span>Start messaging</span>
                             ) : (
@@ -212,6 +254,11 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                                 }`}>
                                 <span className="break-words">
                                 {m.content}
+                                 {m.sender_id === user.id && (
+                                    <span className="ml-1 text-xs">
+                                    {otherUserId && m.read_by?.includes(otherUserId) ? "✓✓" : "✓"}
+                                    </span>
+                                )}
                                 </span>
                                 </div>
                                 </div>

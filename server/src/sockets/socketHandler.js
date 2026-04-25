@@ -46,6 +46,26 @@ export function socketHandler(io) {
         }
       });
 
+      socket.on("mark_read", async ({ conversationId }) => {
+        await pool.query(`
+            INSERT INTO message_reads (message_id, user_id)
+            SELECT m.id, $1
+            FROM messages m
+            WHERE m.conversation_id = $2
+              AND m.sender_id != $1
+              AND NOT EXISTS (
+                SELECT 1 FROM message_reads r
+                WHERE r.message_id = m.id
+                AND r.user_id = $1
+              )
+          `, [userId, conversationId]);
+
+              socket.to(conversationId).emit("messages_read", {
+                conversationId,
+                userId
+              });
+            });
+
       socket.on("typing", (conversationId) => {
        console.log("DECODED TOKEN:", decoded);
         socket.to(conversationId).emit("user_typing", {

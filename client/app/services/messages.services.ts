@@ -19,4 +19,4 @@ export async function sendMessages(conversationId: string | undefined, content: 
     if(!res.ok) throw new Error();
 
     return res.json();
-}
+};
