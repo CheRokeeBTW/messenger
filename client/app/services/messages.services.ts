@@ -1,11 +1,20 @@
-export async function getMessages(conversationId: string | number | undefined){
-    const res = await fetch(`http://localhost:3001/messages/${conversationId}`,{
-        credentials: "include",
-    });
+export async function getMessages(
+  conversationId: string | number | undefined,
+  cursor?: string
+) {
+  let url = `http://localhost:3001/messages/${conversationId}`;
 
-    if(!res.ok) throw new Error();
+  if (cursor) {
+    url += `?cursor=${encodeURIComponent(cursor)}`;
+  }
 
-    return res.json();
+  const res = await fetch(url, {
+    credentials: "include",
+  });
+
+  if (!res.ok) throw new Error();
+
+  return res.json();
 }
 
 export async function sendMessages(conversationId: string | undefined, content: string){

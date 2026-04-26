@@ -31,6 +31,7 @@ type Message = {
   id: string;
   content: string;
   sender_id: string;
+  created_at: string;
   read_by: string[];
 };
 
@@ -47,8 +48,11 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const user = useSelector((state: any) => state.auth.user); //remove any
     const logout = useSelector((state:any) => state.auth.logout);
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [isFetching, setIsFetching] = useState(false);
     // const chats = useSelector((state: RootState) => state.chat.chats)
     const dispatch = useDispatch();
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const selectedChatRef = useRef(selectedChat);
     const otherUser = selectedChat?.participants.find(
         (u) => u.id !== user.id  
@@ -56,46 +60,50 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const otherUserId = otherUser?.id;
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
 
+      const scrollToBottom = () => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        };
+
     console.log(otherUserId, "other user");
 
-        useEffect(() => {
-            selectedChatRef.current = selectedChat;
-        }, [selectedChat]);
+    const isNearBottom = (el: any) => {
+        return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    };
 
         useEffect(() => {
             if (!selectedChat) return;
+            scrollToBottom();
+            const load = async () => {
+                const res = await getMessages(selectedChat.id);
 
-            socket.emit("join_conversation", selectedChat?.id);
-             if (selectedChat?.id){ 
-                dispatch(clearUnread(selectedChat?.id));
-            }
+                setMessages(res.slice().reverse());
 
-                socket.emit("mark_read", {
-                    conversationId: selectedChat.id
-                });
-        }, [selectedChat]);
+                const last = res[res.length - 1];
+                setCursor(last?.created_at);
 
-        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-            const el = e.currentTarget;
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView();
+                }, 0);
+            };
 
-            const isAtBottom =
-                el.scrollHeight - el.scrollTop === el.clientHeight;
-
-            if (isAtBottom && selectedChat?.id) {
-                socket.emit("mark_read", {
-                    conversationId: selectedChat.id
-                });
-            }
-        };
+            load();
+}, [selectedChat]);
 
         useEffect(() => {
-            socket.on("receive_message", ({ conversationId, message }) => {
-                dispatch(setLastMessage({ conversationId, message }));
-                
-                if(selectedChatRef.current?.id === conversationId){
-                    setMessages((prev) => [...prev, message]);
-                }
-            });
+socket.on("receive_message", ({ conversationId, message }) => {
+    if (selectedChatRef.current?.id !== conversationId) return;
+
+    const container = messagesEndRef.current?.parentElement;
+    const shouldScroll = container && isNearBottom(container);
+
+    setMessages(prev => [...prev, message]);
+
+    if (shouldScroll) {
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView();
+        }, 0);
+    }
+});
 
             return () => {
                 socket.off("receive_message");
@@ -117,17 +125,21 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
 
         useEffect(() => {
             if(!selectedChat) return
+            scrollToBottom();
+
             const getChats = async () => {
-                try{
-                    const res = await getMessages(selectedChat?.id);
-                    setMessages(Array.isArray(res) ? res.reverse() : []);
-                    console.log("messages response:", res);
-                }
-                catch (err){
-                    console.error(err)
-                }
+                const res = await getMessages(selectedChat.id);
+
+                setMessages(res.slice().reverse());
+
+                const last = res[res.length - 1];
+                setCursor(last?.created_at);
+
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView();
+                }, 0);
             };
-    
+
             getChats();
         }, [selectedChat]);
 
@@ -221,7 +233,40 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             }, 2000);
         }
 
-        console.log(selectedChat, 'selectedChat')
+        console.log(selectedChat, 'selectedChat');
+
+        const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+                const el = e.currentTarget;
+
+                if (el.scrollTop > 50) return;
+
+                if (!cursor || isFetching) return;
+
+                setIsFetching(true);
+
+                const prevHeight = el.scrollHeight;
+
+                const res: Message[] = await getMessages(selectedChat!.id, cursor);
+
+                if (res.length === 0) {
+                    setCursor(null);
+                    setIsFetching(false);
+                    return;
+                }
+
+                setMessages(prev => {
+                    const existing = new Set(prev.map(m => m.id));
+                    const newMsgs = res.filter(m => !existing.has(m.id));
+                    return [...newMsgs.reverse(), ...prev];
+                });
+
+                setCursor(res[res.length - 1].created_at);
+
+                requestAnimationFrame(() => {
+                    el.scrollTop = el.scrollHeight - prevHeight;
+                    setIsFetching(false);
+                });
+            };
 
     return(
         <div className="flex w-full h-full">
@@ -263,7 +308,8 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                                 </div>
                                 </div>
                             ))
-                            )}
+                        )}
+                        <div ref={messagesEndRef} />
                         </div>
                         {typingUsers.length > 0 && (
                         <div className="text-sm text-black px-2 bg-gray-200">
