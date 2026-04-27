@@ -90,20 +90,20 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
 }, [selectedChat]);
 
         useEffect(() => {
-socket.on("receive_message", ({ conversationId, message }) => {
-    if (selectedChatRef.current?.id !== conversationId) return;
+        socket.on("receive_message", ({ conversationId, message }) => {
+            if (selectedChatRef.current?.id !== conversationId) return;
 
-    const container = messagesEndRef.current?.parentElement;
-    const shouldScroll = container && isNearBottom(container);
+            const container = messagesEndRef.current?.parentElement;
+            const shouldScroll = container && isNearBottom(container);
 
-    setMessages(prev => [...prev, message]);
+            setMessages(prev => [...prev, message]);
 
-    if (shouldScroll) {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView();
-        }, 0);
-    }
-});
+            if (shouldScroll) {
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView();
+                }, 0);
+            }
+        });
 
             return () => {
                 socket.off("receive_message");
@@ -184,7 +184,18 @@ socket.on("receive_message", ({ conversationId, message }) => {
                     sender: user.id,
                 });
 
+                setMessages(prev => [...prev, newMessage]);
+
                 setMessage("");
+
+                const container = messagesEndRef.current?.parentElement;
+                const shouldScroll = container && isNearBottom(container);
+
+                    if (shouldScroll) {
+                        setTimeout(() => {
+                            messagesEndRef.current?.scrollIntoView();
+                        }, 0);
+                    }
             } catch (err){
                 console.error(err);
             }
