@@ -50,6 +50,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const logout = useSelector((state:any) => state.auth.logout);
     const [cursor, setCursor] = useState<string | null>(null);
     const [isFetching, setIsFetching] = useState(false);
+    const onlineUsers = useSelector((state: RootState) => state.online.users);
     // const chats = useSelector((state: RootState) => state.chat.chats)
     const dispatch = useDispatch();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -279,6 +280,8 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 });
             };
 
+            const isOnline = otherUser ? onlineUsers.includes(otherUser.id) : false;
+
     return(
         <div className="flex w-full h-full">
                 {!selectedChat
@@ -291,6 +294,9 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                     <div className="flex flex-col w-full">
                         <div className="w-full h-12 bg-white items-center justify-center flex text-black">
                             {otherUser?.username || "unknown"}
+                                <span className={isOnline ? "text-green-500" : "text-gray-400"}>
+                                ●
+                                </span>
                         </div>
                         <div onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto bg-gray-200">
                           {messages.length === 0 ? (

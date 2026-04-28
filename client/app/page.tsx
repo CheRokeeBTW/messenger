@@ -6,7 +6,9 @@ import { checkAuth, logoutUser } from "./services/auth.services";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import { useDispatch, UseDispatch } from "react-redux";
-import { setUser, logout } from "./redux/slices/authSlice";
+import { setUser } from "./redux/slices/authSlice";
+import { setOnlineUsers } from "./redux/slices/onlineSlice";
+import { socket } from "./services/socket";
 
 type Participant = {
   id: string;
@@ -30,20 +32,30 @@ export default function Home() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-  const isAuth = async () => {
-    try {
-      const data = await checkAuth();
-      dispatch(setUser(data));
-    } catch {
-      router.push("/auth/login");
-    }
-    finally{
-      setIsChecking(false);
-    }
-  };
+    const isAuth = async () => {
+      try {
+        const data = await checkAuth();
+        dispatch(setUser(data));
+      } catch {
+        router.push("/auth/login");
+      }
+      finally{
+        setIsChecking(false);
+      }
+    };
 
-  isAuth();
-}, []);
+    isAuth();
+  }, []);
+
+  useEffect(() => {
+    socket.on("online_users", (users: string[]) => {
+      dispatch(setOnlineUsers(users));
+    });
+
+    return () => {
+      socket.off("online_users");
+    };
+  }, []);
 
 // useEffect(() => {
 //   const logoutU = async () => {

@@ -5,9 +5,7 @@ import { pool } from "../config/db.js";
 const onlineUsers = new Map();
 
 export function socketHandler(io) {
-
   io.on("connection", (socket) => {
-
     try {
       const cookies = cookie.parse(socket.handshake.headers.cookie || "");
       const token = cookies.token;
@@ -15,82 +13,96 @@ export function socketHandler(io) {
       if (!token) throw new Error("No token");
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
       const userId = decoded.userId;
 
-      onlineUsers.set(userId, socket.id);
+      if (!onlineUsers.has(userId)) {
+        onlineUsers.set(userId, new Set());
+      }
+
+      onlineUsers.get(userId).add(socket.id);
 
       socket.join(userId);
 
       console.log("User connected:", userId);
 
-      socket.broadcast.emit("user_online", userId);
+      io.emit("online_users", Array.from(onlineUsers.keys()));
 
       socket.on("join_conversation", (conversationId) => {
         socket.join(conversationId);
       });
 
-      socket.on("send_message", async ({ conversationId, message, sender}) => {
-           const otherUsers = await pool.query(
-              `SELECT user_id FROM conversation_members
-              WHERE conversation_id = $1 AND user_id != $2`,
-              [conversationId, sender]
-            );
-        console.log(otherUsers.rows, 'participants ids');
+      socket.on("send_message", async ({ conversationId, message, sender }) => {
+        const otherUsers = await pool.query(
+          `SELECT user_id FROM conversation_members
+           WHERE conversation_id = $1 AND user_id != $2`,
+          [conversationId, sender]
+        );
+
         io.to(conversationId).emit("receive_message", {
           conversationId,
           message,
-      });
-        for (const user of otherUsers.rows){
-          io.to(user.user_id).emit("message_notification", conversationId, message, sender);
+        });
+
+        for (const user of otherUsers.rows) {
+          io.to(user.user_id).emit("message_notification", {
+            conversationId,
+            message,
+            sender,
+          });
         }
       });
 
       socket.on("mark_read", async ({ conversationId }) => {
-        await pool.query(`
-            INSERT INTO message_reads (message_id, user_id)
-            SELECT m.id, $1
-            FROM messages m
-            WHERE m.conversation_id = $2
-              AND m.sender_id != $1
-              AND NOT EXISTS (
-                SELECT 1 FROM message_reads r
-                WHERE r.message_id = m.id
-                AND r.user_id = $1
-              )
-          `, [userId, conversationId]);
+        await pool.query(
+          `
+          INSERT INTO message_reads (message_id, user_id)
+          SELECT m.id, $1
+          FROM messages m
+          WHERE m.conversation_id = $2
+            AND m.sender_id != $1
+            AND NOT EXISTS (
+              SELECT 1 FROM message_reads r
+              WHERE r.message_id = m.id
+              AND r.user_id = $1
+            )
+        `,
+          [userId, conversationId]
+        );
 
-              socket.to(conversationId).emit("messages_read", {
-                conversationId,
-                userId
-              });
-            });
+        socket.to(conversationId).emit("messages_read", {
+          conversationId,
+          userId,
+        });
+      });
 
       socket.on("typing", (conversationId) => {
-       console.log("DECODED TOKEN:", decoded);
         socket.to(conversationId).emit("user_typing", {
           id: userId,
-          username: decoded.username
-      });
+          username: decoded.username,
+        });
       });
 
-    socket.on("stop_typing", (conversationId) => {
-      socket.to(conversationId).emit("user_stop_typing", userId);
-    });
+      socket.on("stop_typing", (conversationId) => {
+        socket.to(conversationId).emit("user_stop_typing", userId);
+      });
 
       socket.on("disconnect", () => {
-        onlineUsers.delete(userId);
+        const userSockets = onlineUsers.get(userId);
 
-        console.log("User disconnected:", userId);
+        if (userSockets) {
+          userSockets.delete(socket.id);
 
-        socket.broadcast.emit("user_offline", userId);
+          if (userSockets.size === 0) {
+            onlineUsers.delete(userId);
+          }
+        }
+
+        io.emit("online_users", Array.from(onlineUsers.keys()));
       });
 
     } catch (err) {
       console.log("Invalid token");
       socket.disconnect();
     }
-
   });
-
 }

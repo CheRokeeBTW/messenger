@@ -9,6 +9,8 @@ import { setUnread, setChats } from "../redux/slices/chatSlice";
 import formatTime from "../helpers/formatTime";
 import searchImg from "../../public/search.png";
 import Image from "next/image";
+import { setOnlineUsers } from "../redux/slices/onlineSlice";
+import { Root } from "react-dom/client";
 
 type Participant = {
   id: string;
@@ -40,6 +42,7 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     const [users, setUsers] = useState<User[]>([]);
     const [search, setSearch] = useState("");
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
+    const onlineUsers = useSelector((state: RootState) => state.online.users);
     const user = useSelector((state: any) => state.auth.user);
     const dispatch = useDispatch();
     const today: number = Number(new Date().toISOString().slice(8,10).replaceAll("-",""));
@@ -148,9 +151,10 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     ))
   ) : (
     chats.map((chat) => {
-      const otherUser = chat.participants?.find(
+      const otherUser = chat.participants.find(
     (u) => u.id !== user.id
   );
+      const isOnline = otherUser ? onlineUsers.includes(otherUser.id) : false;
       return (
       <div key={chat.id}
        className="flex justify-between p-2 px-6 text-black hover:cursor-pointer hover:bg-gray-200"
@@ -159,6 +163,9 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         <div className="flex flex-col">
         <div className="flex">
         <span className="font-bold">{ otherUser?.username || "unknown" }</span>
+        <span className={isOnline ? "text-green-500" : "text-gray-400"}>
+          ●
+        </span>
         </div>
         <div className="flex">
         <span className="text-[0.75rem] text-nowrap text-zinc-600">
