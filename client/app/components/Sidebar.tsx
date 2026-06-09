@@ -161,7 +161,7 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
        onClick={() => onSelectConversation(chat)}
        >
         <div className="flex flex-col">
-        <div className="flex">
+        <div className="flex gap-2">
         <span className="font-bold">{ otherUser?.username || "unknown" }</span>
         <span className={isOnline ? "text-green-500" : "text-gray-400"}>
           ●
@@ -169,7 +169,7 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         </div>
         <div className="flex">
         <span className="text-[0.75rem] text-nowrap text-zinc-600">
-          {chat?.last_message.length > 40 
+          {chat?.last_message?.length > 40 
           ? (chat.last_message.slice(0,40) + "...")
           : (chat.last_message)
           }

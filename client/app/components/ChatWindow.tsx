@@ -58,8 +58,22 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const otherUser = selectedChat?.participants.find(
         (u) => u.id !== user.id  
     );
+
+    console.log("SOCKET ID", socket.id);
     const otherUserId = otherUser?.id;
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
+
+    useEffect(() => {
+        selectedChatRef.current = selectedChat;
+    }, [selectedChat]);
+
+    useEffect(() => {
+        if (!selectedChat?.id) return;
+
+        console.log("JOINING ROOM", selectedChat.id);
+
+        socket.emit("join_conversation", selectedChat.id);
+    }, [selectedChat]);
 
       const scrollToBottom = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,26 +104,33 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
             load();
 }, [selectedChat]);
 
+const shouldAutoScrollRef = useRef(true);
+
         useEffect(() => {
         socket.on("receive_message", ({ conversationId, message }) => {
-            if (selectedChatRef.current?.id !== conversationId) return;
+            if (selectedChatRef.current?.id !== conversationId) return
 
             const container = messagesEndRef.current?.parentElement;
-            const shouldScroll = container && isNearBottom(container);
+            shouldAutoScrollRef.current =
+    container ? isNearBottom(container) : false;
 
             setMessages(prev => [...prev, message]);
 
-            if (shouldScroll) {
-                setTimeout(() => {
-                    messagesEndRef.current?.scrollIntoView();
-                }, 0);
-            }
         });
 
             return () => {
                 socket.off("receive_message");
             };
         }, []);
+
+        useEffect(() => {
+    if (shouldAutoScrollRef.current) {
+        messagesEndRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+        });
+    }
+}, [messages]);
 
         useEffect(() => {
             const handleNotification = (conversationId: string, message: string, sender: string) => {
@@ -127,20 +148,20 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
         useEffect(() => {
             if(!selectedChat) return
             scrollToBottom();
-
+            
             const getChats = async () => {
                 const res = await getMessages(selectedChat.id);
-
+                
                 setMessages(res.slice().reverse());
-
+                
                 const last = res[res.length - 1];
                 setCursor(last?.created_at);
-
+                
                 setTimeout(() => {
                     messagesEndRef.current?.scrollIntoView();
                 }, 0);
             };
-
+            
             getChats();
         }, [selectedChat]);
 
@@ -185,7 +206,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                     sender: user.id,
                 });
 
-                setMessages(prev => [...prev, newMessage]);
+                // setMessages(prev => [...prev, newMessage]);
 
                 setMessage("");
 
@@ -292,7 +313,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
                 )
                 : (
                     <div className="flex flex-col w-full">
-                        <div className="w-full h-12 bg-white items-center justify-center flex text-black">
+                        <div className="w-full h-12 bg-white items-center justify-center flex text-black gap-1">
                             {otherUser?.username || "unknown"}
                                 <span className={isOnline ? "text-green-500" : "text-gray-400"}>
                                 ●

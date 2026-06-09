@@ -28,7 +28,9 @@ export function socketHandler(io) {
       io.emit("online_users", Array.from(onlineUsers.keys()));
 
       socket.on("join_conversation", (conversationId) => {
+        console.log("JOIN ROOM", conversationId);
         socket.join(conversationId);
+        console.log(socket.rooms);
       });
 
       socket.on("send_message", async ({ conversationId, message, sender }) => {
