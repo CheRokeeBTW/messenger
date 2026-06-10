@@ -34,6 +34,7 @@ export function socketHandler(io) {
       });
 
       socket.on("send_message", async ({ conversationId, message, sender }) => {
+
         const otherUsers = await pool.query(
           `SELECT user_id FROM conversation_members
            WHERE conversation_id = $1 AND user_id != $2`,
@@ -79,13 +80,14 @@ export function socketHandler(io) {
 
       socket.on("typing", (conversationId) => {
         socket.to(conversationId).emit("user_typing", {
+          conversationId,
           id: userId,
           username: decoded.username,
         });
       });
 
       socket.on("stop_typing", (conversationId) => {
-        socket.to(conversationId).emit("user_stop_typing", userId);
+        socket.to(conversationId).emit("user_stop_typing", {conversationId, userId});
       });
 
       socket.on("disconnect", () => {

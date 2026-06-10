@@ -43,7 +43,7 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
     const [search, setSearch] = useState("");
     const messageNotifications = useSelector((state: RootState) => state.chat.unreadMessages);
     const onlineUsers = useSelector((state: RootState) => state.online.users);
-    const user = useSelector((state: any) => state.auth.user);
+    const user = useSelector((state: any) => state.auth.user); //remove any 
     const dispatch = useDispatch();
     const today: number = Number(new Date().toISOString().slice(8,10).replaceAll("-",""));
     let days: number;
@@ -178,12 +178,12 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         </div>
         <div className="flex w-full items-center">
           { messageNotifications[chat.id]
-          ? (<span className="pl-1 rounded-full bg-blue-500 text-white w-[2rem]">+ {messageNotifications[chat.id]}</span>)
+          ? (<span className="px-2 mr-1 text-nowrap rounded-full bg-blue-500 text-white">+ {messageNotifications[chat.id]}</span>)
           : ("")
           }
         </div>
         <div className="flex items-center">
-          <span className="text-gray-400 text-[0.9rem]">{chat.last_message_time ? formatTime(chat.last_message_time) : ""}</span>
+          <span className="text mr-1 -gray-400 text-[0.9rem]">{chat.last_message_time ? formatTime(chat.last_message_time) : ""}</span>
         </div>
       </div>
     )})

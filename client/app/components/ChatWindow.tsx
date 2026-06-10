@@ -36,6 +36,7 @@ type Message = {
 };
 
 type TypingUser = {
+    conversationId: string;
     id: string;
     username: string;
 };
@@ -111,8 +112,8 @@ const shouldAutoScrollRef = useRef(true);
             if (selectedChatRef.current?.id !== conversationId) return
 
             const container = messagesEndRef.current?.parentElement;
-            shouldAutoScrollRef.current =
-    container ? isNearBottom(container) : false;
+                    shouldAutoScrollRef.current =
+            container ? isNearBottom(container) : false;
 
             setMessages(prev => [...prev, message]);
 
@@ -133,11 +134,25 @@ const shouldAutoScrollRef = useRef(true);
 }, [messages]);
 
         useEffect(() => {
-            const handleNotification = (conversationId: string, message: string, sender: string) => {
-                if (selectedChatRef.current?.id !== conversationId){
-                    dispatch(incrementUnread(conversationId));
-                };
-                dispatch(setLastMessage({ conversationId, message }))
+            const handleNotification = ({
+            conversationId,
+            message,
+            sender,
+            }: {
+            conversationId: string;
+            message: Message;
+            sender: string;
+            }) => {
+            if (selectedChatRef.current?.id !== conversationId) {
+                dispatch(incrementUnread(conversationId));
+            }
+
+            dispatch(
+                setLastMessage({
+                conversationId,
+                message,
+                })
+            );
             };
             socket.on("message_notification", (handleNotification))
             return () => {
@@ -166,20 +181,27 @@ const shouldAutoScrollRef = useRef(true);
         }, [selectedChat]);
 
         useEffect(() => {
+            if (!selectedChat?.id) return;
+            socket.emit("mark_read", {conversationId: selectedChat?.id});
+            dispatch(clearUnread(selectedChat.id));
+        }, [selectedChat])
+        console.log(messageNotifications, "TEST")
+
+        useEffect(() => {
             const handleMessagesRead = ({ conversationId, userId } : {conversationId: string | number | undefined, userId: string}) => {
                 if (selectedChatRef.current?.id !== conversationId) return;
 
-                setMessages(prev =>
-                    prev.map(msg => {
-                        if (!msg.read_by?.includes(userId)) {
-                            return {
-                                ...msg,
-                                read_by: [...(msg.read_by || []), userId],
-                            };
-                        }
-                        return msg;
-                    })
-                );
+                // setMessages(prev =>
+                //     prev.map(msg => {
+                //         if (!msg.read_by?.includes(AuserId)) {
+                //             return {
+                //                 ...msg,
+                //                 read_by: [...(msg.read_by || []), userId],
+                //             };
+                //         }
+                //         return msg;
+                //     })
+                // );
             };
 
             socket.on("messages_read", handleMessagesRead);
@@ -223,9 +245,17 @@ const shouldAutoScrollRef = useRef(true);
             }
         };
 
+        useEffect(() => {
+    setTypingUsers([]);
+}, [selectedChat?.id]);
+
         //kinda need to add typing effect for users
         useEffect(() => {
             const handleUserTyping = (data: TypingUser) => {
+                console.log("TYPING DATA", data);
+                if (selectedChatRef.current?.id !== data.conversationId) {
+                    return;
+                }
                 if (user.id === data.id) return;
                 setTypingUsers((prev) => {
                 if (prev.find(u => u.id === data.id)) return prev;
@@ -233,7 +263,7 @@ const shouldAutoScrollRef = useRef(true);
             });
             };
 
-           const handleUserStopTyping = (userId: string) => {
+           const handleUserStopTyping = ({conversationId, userId} : {conversationId: string, userId: string}) => {
                 setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
             };
 
@@ -249,11 +279,11 @@ const shouldAutoScrollRef = useRef(true);
         const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
             setMessage(e.target.value)
 
-            if (!selectedChat?.id) return;
+            if (!selectedChatRef.current?.id) return;
 
             if (!isTyping) {
                 setIsTyping(true);
-                socket.emit('typing', selectedChat.id);
+                socket.emit('typing', selectedChatRef.current?.id);
             }
 
             if (timerRef.current) {
@@ -262,7 +292,7 @@ const shouldAutoScrollRef = useRef(true);
 
             timerRef.current = setTimeout(() => {
                 setIsTyping(false);
-                socket.emit('stop_typing', selectedChat.id);
+                socket.emit('stop_typing', selectedChatRef.current?.id);
             }, 2000);
         }
 
@@ -332,8 +362,8 @@ const shouldAutoScrollRef = useRef(true);
                                 >
                                 <div
                                  className={`overflow-x-hidden max-w-[500px] ${m.sender_id === user.id 
-                                    ? "bg-white mb-2 max-w-[50%] px-3 py-2 rounded-lg text-black" 
-                                    : "bg-blue-500 mb-2 max-w-[50%] px-3 py-2 rounded-lg"
+                                    ? "bg-white mb-3 max-w-[50%] px-3 py-2 rounded-lg text-black" 
+                                    : "bg-blue-500 mb-3 max-w-[50%] px-3 py-2 rounded-lg"
                                 }`}>
                                 <span className="break-words">
                                 {m.content}

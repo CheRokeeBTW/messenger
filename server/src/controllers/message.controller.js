@@ -16,7 +16,7 @@ export async function sendMessage(req, res) {
       return res.status(403).json({
         message: "Not a member of this conversation"
       });
-    }
+    };
 
     const message = await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, content)
@@ -36,7 +36,7 @@ export async function sendMessage(req, res) {
     });
 
   }
-}
+};
 
 export async function getMessages(req, res) {
   try {
