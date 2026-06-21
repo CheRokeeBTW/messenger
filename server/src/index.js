@@ -10,6 +10,8 @@ import conversationRoutes from "./routes/converstation.routes.js";
 import messageRoutes from './routes/message.routes.js';
 import cookieParser from "cookie-parser";
 import userRoutes from './routes/users.routes.js';
+import stickerRoutes from "./routes/sticker.routes.js";
+
 
 async function testDB() {
   try {
@@ -47,6 +49,8 @@ app.use("/conversations", conversationRoutes);
 
 //messages
 app.use("/messages", messageRoutes);
+
+app.use("/stickers", stickerRoutes);
 
 app.use("/users", userRoutes);
 

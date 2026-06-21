@@ -3,7 +3,7 @@ import { pool } from "../config/db.js";
 export async function sendMessage(req, res) {
   try {
 
-    const { conversationId, content } = req.body;
+    const { conversationId, content, type = "text" } = req.body;
     const senderId = req.user.userId;
 
     const memberCheck = await pool.query(
@@ -19,10 +19,10 @@ export async function sendMessage(req, res) {
     };
 
     const message = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_id, content)
-       VALUES ($1,$2,$3)
+      `INSERT INTO messages (conversation_id, sender_id, content, type)
+       VALUES ($1,$2,$3, $4)
        RETURNING *`,
-      [conversationId, senderId, content]
+      [conversationId, senderId, content, type]
     );
 
     res.json(message.rows[0]);

@@ -17,12 +17,12 @@ export async function getMessages(
   return res.json();
 }
 
-export async function sendMessages(conversationId: string | undefined, content: string){
+export async function sendMessages(conversationId: string | undefined, content: string, type: "text" | "sticker" = "text"){
     const res = await fetch(`http://localhost:3001/messages/`,{
         method: "POST",
         headers: { "Content-Type":"application/json" },
         credentials: "include",
-        body: JSON.stringify({conversationId: conversationId, content: content}),
+        body: JSON.stringify({conversationId, content, type}),
     });
 
     if(!res.ok) throw new Error();

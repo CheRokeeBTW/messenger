@@ -7,6 +7,7 @@ import { RootState } from "../redux/store";
 import { incrementUnread, clearUnread, setLastMessage } from "../redux/slices/chatSlice";
 import Image from "next/image";
 import sendImg from "../../public/Send_icon.svg.png";
+import Stickers from "./Stickers";
 
 type Participant = {
   id: string;
@@ -29,6 +30,7 @@ type ChatWindowProps = {
 
 type Message = {
   id: string;
+  type: "text" | "sticker";
   content: string;
   sender_id: string;
   created_at: string;
@@ -59,6 +61,9 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const otherUser = selectedChat?.participants.find(
         (u) => u.id !== user.id  
     );
+    const [isStickerOpen, setIsStickerOpen] = useState<boolean>(false);
+    const [sticker, setSticker] = useState([]);
+    const [search, setSearch] = useState("");
 
     console.log("SOCKET ID", socket.id);
     const otherUserId = otherUser?.id;
@@ -185,7 +190,11 @@ const shouldAutoScrollRef = useRef(true);
             socket.emit("mark_read", {conversationId: selectedChat?.id});
             dispatch(clearUnread(selectedChat.id));
         }, [selectedChat])
-        console.log(messageNotifications, "TEST")
+        console.log(messageNotifications, "TEST");
+
+        const toggleStickers = () =>{
+            setIsStickerOpen((s) => !s)
+        }
 
         useEffect(() => {
             const handleMessagesRead = ({ conversationId, userId } : {conversationId: string | number | undefined, userId: string}) => {
@@ -230,6 +239,44 @@ const shouldAutoScrollRef = useRef(true);
 
                 // setMessages(prev => [...prev, newMessage]);
 
+                setMessage("");
+
+                const container = messagesEndRef.current?.parentElement;
+                const shouldScroll = container && isNearBottom(container);
+
+                    if (shouldScroll) {
+                        setTimeout(() => {
+                            messagesEndRef.current?.scrollIntoView();
+                        }, 0);
+                    }
+            } catch (err){
+                console.error(err);
+            }
+        };
+
+        const handleSendSticker = async (url: string) => {
+            try{
+                if (!selectedChat?.id) return;
+                const newMessage = await sendMessages(
+                    selectedChat?.id,
+                    url,
+                    "sticker"
+                );
+                
+                dispatch(setLastMessage({
+                    conversationId: selectedChat.id,
+                    message: newMessage,
+                }));
+
+                socket.emit("send_message", {
+                    conversationId: selectedChat?.id,
+                    message: newMessage,
+                    sender: user.id,
+                });
+
+                // setMessages(prev => [...prev, newMessage]);
+
+                setIsStickerOpen(false);
                 setMessage("");
 
                 const container = messagesEndRef.current?.parentElement;
@@ -366,7 +413,15 @@ const shouldAutoScrollRef = useRef(true);
                                     : "bg-blue-500 mb-3 max-w-[50%] px-3 py-2 rounded-lg"
                                 }`}>
                                 <span className="break-words">
-                                {m.content}
+                                {m.type === "sticker" ? (
+                                <img
+                                    src={m.content}
+                                    alt="sticker"
+                                    className="max-w-[180px] rounded-lg"
+                                />
+                                ) : (
+                                <span>{m.content}</span>
+                                )}
                                  {m.sender_id === user.id && (
                                     <span className="ml-1 text-xs">
                                     {otherUserId && m.read_by?.includes(otherUserId) ? "✓✓" : "✓"}
@@ -397,6 +452,14 @@ const shouldAutoScrollRef = useRef(true);
                             onChange={handleTyping}
                             className="w-full focus:outline-none placeholder:text-zinc-500"
                             />
+                        {isStickerOpen && (
+                        <div className="absolute bottom-13 right-6 w-[520px] h-[500px] bg-white shadow-lg rounded-lg overflow-y-auto z-50 no-scrollbar">
+                            <Stickers onSelectSticker={handleSendSticker} />
+                        </div>
+                        )}
+                            <span
+                            onClick={toggleStickers}
+                            >Stickers</span>
                             <Image
                             onClick={handleSendMessage}
                             alt = "sendMsg"
