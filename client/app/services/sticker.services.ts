@@ -1,6 +1,6 @@
 export async function searchStickers(query: string){
     const res = await fetch(
-        `http://localhost:3001/stickers/search?q=${encodeURIComponent(query)}`, {
+        `${process.env.NEXT_PUBLIC_API_URL}/stickers/search?q=${encodeURIComponent(query)}`, {
         credentials: "include",
     });
 
@@ -14,7 +14,7 @@ export async function searchStickers(query: string){
 
 export async function getTrendingStickers(){
     const res = await fetch(
-        `http://localhost:3001/stickers/trending`, {
+        `${process.env.NEXT_PUBLIC_API_URL}/stickers/trending`, {
         credentials: "include",
     });
 

@@ -1,5 +1,5 @@
 export async function registerUser(email: string, username: string, password: string){
-    const res = await fetch('http://localhost:3001/auth/register',{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`,{
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, username, password })
@@ -15,7 +15,7 @@ export async function registerUser(email: string, username: string, password: st
 };
 
 export async function loginUser(email: string, password: string){
-    const res = await fetch('http://localhost:3001/auth/login',{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`,{
         method: "POST",
         headers: { "Content-Type":"application/json"},
         credentials: "include",
@@ -32,7 +32,7 @@ export async function loginUser(email: string, password: string){
 }
 
 export async function logoutUser(){
-    const res = await fetch('http://localhost:3001/auth/logout',{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`,{
         method: "POST",
         credentials: "include",
     })
@@ -45,7 +45,7 @@ export async function logoutUser(){
 }
 
 export async function checkAuth(){
-      const res = await fetch("http://localhost:3001/auth/me", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
         credentials: "include",
       });
 

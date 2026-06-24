@@ -1,5 +1,5 @@
 export async function getConversations(){
-    const res = await fetch('http://localhost:3001/conversations',{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations`,{
         credentials: "include",
     });
 
@@ -9,7 +9,7 @@ export async function getConversations(){
 }
 
 export async function getUsers(query: string){
-    const res = await fetch(`http://localhost:3001/users/search?query=${query}`,{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/search?query=${query}`,{
         credentials: "include",
     });
 
@@ -19,7 +19,7 @@ export async function getUsers(query: string){
 }
 
 export async function createConversation(memberId: string[]){
-    const res = await fetch('http://localhost:3001/conversations',{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/conversations`,{
         method: "POST",
         headers: { "Content-Type":"application/json" },
         credentials: "include",

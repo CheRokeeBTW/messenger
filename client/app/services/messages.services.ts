@@ -2,7 +2,7 @@ export async function getMessages(
   conversationId: string | number | undefined,
   cursor?: string
 ) {
-  let url = `http://localhost:3001/messages/${conversationId}`;
+  let url = `${process.env.NEXT_PUBLIC_API_URL}/messages/${conversationId}`;
 
   if (cursor) {
     url += `?cursor=${encodeURIComponent(cursor)}`;
@@ -18,7 +18,7 @@ export async function getMessages(
 }
 
 export async function sendMessages(conversationId: string | undefined, content: string, type: "text" | "sticker" = "text"){
-    const res = await fetch(`http://localhost:3001/messages/`,{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/`,{
         method: "POST",
         headers: { "Content-Type":"application/json" },
         credentials: "include",
