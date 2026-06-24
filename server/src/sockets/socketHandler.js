@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import * as cookie from "cookie";
+// import * as cookie from "cookie";
 import { pool } from "../config/db.js";
 
 const onlineUsers = new Map();
@@ -7,7 +7,19 @@ const onlineUsers = new Map();
 export function socketHandler(io) {
   io.on("connection", (socket) => {
     try {
-      const cookies = cookie.parse(socket.handshake.headers.cookie || "");
+      function parseCookies(cookieHeader = "") {
+  return Object.fromEntries(
+    cookieHeader
+      .split(";")
+      .map(c => c.trim())
+      .filter(Boolean)
+      .map(c => {
+        const [name, ...rest] = c.split("=");
+        return [name, rest.join("=")];
+      })
+  );
+}
+const cookies = parseCookies(socket.handshake.headers.cookie || "");
       const token = cookies.token;
 
       if (!token) throw new Error("No token");
