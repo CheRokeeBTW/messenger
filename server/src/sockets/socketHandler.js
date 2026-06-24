@@ -7,20 +7,27 @@ const onlineUsers = new Map();
 export function socketHandler(io) {
   io.on("connection", (socket) => {
     try {
-      function parseCookies(cookieHeader = "") {
-  return Object.fromEntries(
-    cookieHeader
-      .split(";")
-      .map(c => c.trim())
-      .filter(Boolean)
-      .map(c => {
-        const [name, ...rest] = c.split("=");
-        return [name, rest.join("=")];
-      })
-  );
-}
-const cookies = parseCookies(socket.handshake.headers.cookie || "");
-      const token = cookies.token;
+
+    function getCookieValue(cookieHeader, name) {
+      if (!cookieHeader) return null;
+
+      const cookies = cookieHeader.split(";");
+
+      for (const cookie of cookies) {
+        const [key, value] = cookie.trim().split("=");
+
+        if (key === name) {
+          return decodeURIComponent(value);
+        }
+      }
+
+      return null;
+    }
+// const cookies = parseCookies(socket.handshake.headers.cookie || "");
+      const token = getCookieValue(
+        socket.handshake.headers.cookie,
+        "token"
+      );
 
       if (!token) throw new Error("No token");
 
