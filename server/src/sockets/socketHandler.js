@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import cookie from "cookie";
+import * as cookie from "cookie";
 import { pool } from "../config/db.js";
 
 const onlineUsers = new Map();
