@@ -8,6 +8,7 @@ import { incrementUnread, clearUnread, setLastMessage } from "../redux/slices/ch
 import Image from "next/image";
 import sendImg from "../../public/Send_icon.svg.png";
 import Stickers from "./Stickers";
+import stickerImg from "../../public/18737600.png"
 
 type Participant = {
   id: string;
@@ -384,7 +385,7 @@ const shouldAutoScrollRef = useRef(true);
         <div className="flex w-full h-full">
                 {!selectedChat
                 ? (
-                    <div className="flex bg-zinc-600 w-full h-full justify-center items-center">
+                    <div className="flex bg-zinc-900 w-full h-full justify-center items-center">
                         Start a conversation
                     </div>
                 )
@@ -396,7 +397,7 @@ const shouldAutoScrollRef = useRef(true);
                                 ●
                                 </span>
                         </div>
-                        <div onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto bg-gray-200">
+                        <div onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto bg-gray-400">
                           {messages.length === 0 ? (
                             <span>Start messaging</span>
                             ) : (
@@ -457,9 +458,12 @@ const shouldAutoScrollRef = useRef(true);
                             <Stickers onSelectSticker={handleSendSticker} />
                         </div>
                         )}
-                            <span
+                            <Image
+                            alt="stickers"
                             onClick={toggleStickers}
-                            >Stickers</span>
+                            src={stickerImg}
+                            className="w-[1.3rem] h-[1.3rem] mr-[10px] hover:cursor-pointer"
+                            />
                             <Image
                             onClick={handleSendMessage}
                             alt = "sendMsg"
