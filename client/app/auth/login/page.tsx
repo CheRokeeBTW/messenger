@@ -60,6 +60,10 @@ if(isChecking) return(
         }
     }
 
+    const handleRedirect = () =>{
+        router.push("/auth/register")
+    }
+
     return(
         <div className="flex justify-center items-center h-screen">
             <div className="flex flex-col items-center gap-2">
@@ -75,7 +79,7 @@ if(isChecking) return(
                         type="text"
                         value = {email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="name"
+                        placeholder="email"
                         className="w-full pl-4 py-2 rounded-lg bg-zinc-800"
                         required
                     />
@@ -90,7 +94,7 @@ if(isChecking) return(
                     {error && <p className="text-red-500 text-sm">{error}</p>}
                     <button
                     type="submit"
-                    className={`hover:cursor-pointer border rounded-lg ${
+                    className={`hover:cursor-pointer border-none rounded-lg text-[1.2rem] ${
                         isLoading
                         ? "cursor-not-allowed bg-zinc-600"
                         : "bg-gray-700 hover:bg-gray-400"
@@ -99,6 +103,12 @@ if(isChecking) return(
                         {isLoading ? "logging in..." : "Enter the chat"}
                     </button>
                 </form>
+                <button
+                    className="hover:cursor-pointer w-full bg-blue-600 border-none rounded-lg hover:bg-gray-400 text-[1.2rem]"
+                    onClick = {handleRedirect}
+                >
+                    Create an account
+                </button>
             </div>
         </div>
     )

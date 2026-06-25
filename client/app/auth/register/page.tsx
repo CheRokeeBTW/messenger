@@ -57,16 +57,20 @@ export default function RegisterPage(){
         }
     }
 
+        const handleRedirect = () =>{
+            router.push("/auth/login")
+        }
+
     return(
         <div className="flex justify-center items-center h-screen">
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3">
                 <h1 className="flex justify-center text-[1.2rem]">Create an account</h1>
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
                     handleRegister();
                 }}
-                className="w-100 flex flex-col gap-5"
+                className="w-100 flex flex-col gap-3"
             >
                 <input
                     type="text"
@@ -105,6 +109,12 @@ export default function RegisterPage(){
                     {isLoading ? "Creating an account" : "Register"}
                 </button>
             </form>
+                            <button
+                    className="hover:cursor-pointer w-full bg-blue-600 border-none rounded-lg hover:bg-gray-400 text-[1.2rem]"
+                    onClick = {handleRedirect}
+                >
+                    I already have an account
+                </button>
         </div>
         </div>
     )
