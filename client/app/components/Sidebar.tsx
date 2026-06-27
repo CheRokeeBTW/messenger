@@ -118,6 +118,10 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
         }
     };
 
+        if(!user){
+          return null
+        }
+
   return (
     <div className="w-96 bg-white h-full flex flex-col">
       <div className="py-3 pl-6 flex gap-4">

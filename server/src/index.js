@@ -32,7 +32,7 @@ const app = express();
 
 app.use(
     cors({
-    origin: "https://messenger-kappa-lime.vercel.app", 
+    origin: process.env.CLIENT_URL, 
     credentials: true
   })
 );
@@ -66,7 +66,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-    origin: "https://messenger-kappa-lime.vercel.app",
+    origin: process.env.CLIENT_URL,
     methods: ["GET", "POST"],
     credentials: true,
   }

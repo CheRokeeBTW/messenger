@@ -8,7 +8,11 @@ import { incrementUnread, clearUnread, setLastMessage } from "../redux/slices/ch
 import Image from "next/image";
 import sendImg from "../../public/Send_icon.svg.png";
 import Stickers from "./Stickers";
-import stickerImg from "../../public/18737600.png"
+import stickerImg from "../../public/18737600.png";
+import logoutImg from "../../public/1286853.png";
+import { logout } from "../redux/slices/authSlice";
+import { logoutUser } from "../services/auth.services";
+import { useRouter } from "next/navigation";
 
 type Participant = {
   id: string;
@@ -51,12 +55,13 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const user = useSelector((state: any) => state.auth.user); //remove any
-    const logout = useSelector((state:any) => state.auth.logout);
+    // const logout = useSelector((state:any) => state.auth.logout);
     const [cursor, setCursor] = useState<string | null>(null);
     const [isFetching, setIsFetching] = useState(false);
     const onlineUsers = useSelector((state: RootState) => state.online.users);
     // const chats = useSelector((state: RootState) => state.chat.chats)
     const dispatch = useDispatch();
+    const router = useRouter();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const selectedChatRef = useRef(selectedChat);
     const otherUser = selectedChat?.participants.find(
@@ -293,6 +298,17 @@ const shouldAutoScrollRef = useRef(true);
             }
         };
 
+        const handleLogout = async() =>{
+            try{
+                await logoutUser();
+                dispatch(logout());
+                router.push("/auth/login");
+            }
+            catch (err){
+                console.error(err)
+            }
+        }
+
         useEffect(() => {
     setTypingUsers([]);
 }, [selectedChat?.id]);
@@ -385,8 +401,18 @@ const shouldAutoScrollRef = useRef(true);
         <div className="flex w-full h-full">
                 {!selectedChat
                 ? (
-                    <div className="flex bg-zinc-900 w-full h-full justify-center items-center">
-                        Start a conversation
+                    <div className="flex flex-col w-full">
+                        <div className="w-full h-12 bg-white justify-end items-center flex text-black gap-1">
+                            <Image
+                                alt = "logout"
+                                src = {logoutImg}
+                                onClick={handleLogout}
+                                className="w-[1.3rem] h-[1.3rem] hover:cursor-pointer mr-[10px]"
+                                />
+                        </div>
+                        <div className="flex bg-zinc-900 w-full h-full justify-center items-center">
+                            Start a conversation
+                        </div>
                     </div>
                 )
                 : (
