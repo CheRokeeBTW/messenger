@@ -91,6 +91,8 @@ export function socketHandler(io) {
           [userId, conversationId]
         );
 
+        console.log("MARK READ RECEIVED", conversationId, userId);
+
         socket.to(conversationId).emit("messages_read", {
           conversationId,
           userId,

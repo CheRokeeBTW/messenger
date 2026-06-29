@@ -57,19 +57,6 @@ export default function Home() {
     };
   }, []);
 
-// useEffect(() => {
-//   const logoutU = async () => {
-//     try {
-//       const data = await logoutUser();
-//       dispatch(logout());
-//     } catch{
-//       console.error('Fail to logout')
-//     } 
-//   };
-
-//   logoutU();
-// }, []);
-
 console.log(selectedChat)
 
 if(isChecking) return(

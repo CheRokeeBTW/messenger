@@ -121,12 +121,19 @@ const shouldAutoScrollRef = useRef(true);
         useEffect(() => {
         socket.on("receive_message", ({ conversationId, message }) => {
             if (selectedChatRef.current?.id !== conversationId) return
-
+            
+            socket.emit("mark_read", {
+                conversationId,
+            });
+            
             const container = messagesEndRef.current?.parentElement;
                     shouldAutoScrollRef.current =
             container ? isNearBottom(container) : false;
+            
 
             setMessages(prev => [...prev, message]);
+    
+            console.log('READ')
 
         });
 
@@ -206,18 +213,22 @@ const shouldAutoScrollRef = useRef(true);
             const handleMessagesRead = ({ conversationId, userId } : {conversationId: string | number | undefined, userId: string}) => {
                 if (selectedChatRef.current?.id !== conversationId) return;
 
-                // setMessages(prev =>
-                //     prev.map(msg => {
-                //         if (!msg.read_by?.includes(AuserId)) {
-                //             return {
-                //                 ...msg,
-                //                 read_by: [...(msg.read_by || []), userId],
-                //             };
-                //         }
-                //         return msg;
-                //     })
-                // );
+                console.log('WORKS')
+
+                setMessages(prev =>
+                    prev.map(msg => {
+                        if (!msg.read_by?.includes(userId)) {
+                            return {
+                                ...msg,
+                                read_by: [...(msg.read_by || []), userId],
+                            };
+                        }
+                        return msg;
+                    })
+                );
             };
+
+            
 
             socket.on("messages_read", handleMessagesRead);
 
@@ -394,6 +405,8 @@ const shouldAutoScrollRef = useRef(true);
                     setIsFetching(false);
                 });
             };
+
+            console.log(messages, 'MESSAGES')
 
             const isOnline = otherUser ? onlineUsers.includes(otherUser.id) : false;
 

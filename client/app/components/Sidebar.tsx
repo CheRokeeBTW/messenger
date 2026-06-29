@@ -11,6 +11,8 @@ import searchImg from "../../public/search.png";
 import Image from "next/image";
 import { setOnlineUsers } from "../redux/slices/onlineSlice";
 import { Root } from "react-dom/client";
+import { socket } from "../services/socket";
+import { incrementUnread } from "../redux/slices/chatSlice";
 
 type Participant = {
   id: string;
@@ -62,6 +64,15 @@ export default function Sidebar( {onSelectConversation}: SidebarProps ) {
 
       return () => clearInterval(interval);
     }, []);
+
+            // useEffect(() => {
+            // socket.on("receive_message", ({ conversationId, message }) => {
+            //   dispatch(incrementUnread(conversationId));
+            //   console.log('READ')
+            //     return () => {
+            //         socket.off("receive_message");
+            //     };
+            // })}, []);
 
     useEffect(() => {
         const getChats = async () => {
