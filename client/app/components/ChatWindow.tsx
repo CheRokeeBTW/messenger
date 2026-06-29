@@ -13,6 +13,7 @@ import logoutImg from "../../public/1286853.png";
 import { logout } from "../redux/slices/authSlice";
 import { logoutUser } from "../services/auth.services";
 import { useRouter } from "next/navigation";
+import { playNotificationSound } from "../services/notification.service";
 
 type Participant = {
   id: string;
@@ -120,6 +121,11 @@ const shouldAutoScrollRef = useRef(true);
 
         useEffect(() => {
         socket.on("receive_message", ({ conversationId, message }) => {
+            
+            if (document.hidden) {
+                playNotificationSound();
+            };
+
             if (selectedChatRef.current?.id !== conversationId) return
             
             socket.emit("mark_read", {
@@ -163,7 +169,8 @@ const shouldAutoScrollRef = useRef(true);
             }) => {
             if (selectedChatRef.current?.id !== conversationId) {
                 dispatch(incrementUnread(conversationId));
-            }
+                playNotificationSound();
+            };
 
             dispatch(
                 setLastMessage({
