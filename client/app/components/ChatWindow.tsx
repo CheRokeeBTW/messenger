@@ -13,6 +13,7 @@ import logoutImg from "../../public/1286853.png";
 import { logout } from "../redux/slices/authSlice";
 import { logoutUser } from "../services/auth.services";
 import { useRouter } from "next/navigation";
+import { uploadImage } from "../services/upload.services";
 import { playNotificationSound } from "../services/notification.service";
 
 type Participant = {
@@ -36,7 +37,7 @@ type ChatWindowProps = {
 
 type Message = {
   id: string;
-  type: "text" | "sticker";
+  type: "text" | "sticker" | "image";
   content: string;
   sender_id: string;
   created_at: string;
@@ -50,6 +51,7 @@ type TypingUser = {
 };
 
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
+    const [pastedFile, setPastedFile] = useState<File | null>(null);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -245,38 +247,68 @@ const shouldAutoScrollRef = useRef(true);
         }, []);
 
         const handleSendMessage = async () => {
-            if (!message.trim()) return;
-            try{
-                if (!selectedChat?.id) return;
-                const newMessage = await sendMessages(selectedChat?.id, message);
-                
-                dispatch(setLastMessage({
-                    conversationId: selectedChat.id,
-                    message: newMessage,
-                }));
+    if (!selectedChat?.id) return;
 
-                socket.emit("send_message", {
-                    conversationId: selectedChat?.id,
-                    message: newMessage,
-                    sender: user.id,
-                });
+    try {
+        if (pastedFile) {
+            const { url } = await uploadImage(pastedFile);
 
-                // setMessages(prev => [...prev, newMessage]);
+            const newMessage = await sendMessages(
+                selectedChat.id,
+                url,
+                "image"
+            );
 
-                setMessage("");
+            dispatch(setLastMessage({
+                conversationId: selectedChat.id,
+                message: newMessage,
+            }));
 
-                const container = messagesEndRef.current?.parentElement;
-                const shouldScroll = container && isNearBottom(container);
+            socket.emit("send_message", {
+                conversationId: selectedChat.id,
+                message: newMessage,
+                sender: user.id,
+            });
 
-                    if (shouldScroll) {
-                        setTimeout(() => {
-                            messagesEndRef.current?.scrollIntoView();
-                        }, 0);
-                    }
-            } catch (err){
-                console.error(err);
-            }
-        };
+            setPastedFile(null);
+            setMessage("");
+
+            return;
+        }
+
+        if (!message.trim()) return;
+
+        const newMessage = await sendMessages(
+            selectedChat.id,
+            message
+        );
+
+        dispatch(setLastMessage({
+            conversationId: selectedChat.id,
+            message: newMessage,
+        }));
+
+        socket.emit("send_message", {
+            conversationId: selectedChat.id,
+            message: newMessage,
+            sender: user.id,
+        });
+
+        setMessage("");
+
+        const container = messagesEndRef.current?.parentElement;
+        const shouldScroll = container && isNearBottom(container);
+
+        if (shouldScroll) {
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView();
+            }, 0);
+        }
+
+    } catch (err) {
+        console.error(err);
+    }
+};
 
         const handleSendSticker = async (url: string) => {
             try{
@@ -376,7 +408,17 @@ const shouldAutoScrollRef = useRef(true);
                 setIsTyping(false);
                 socket.emit('stop_typing', selectedChatRef.current?.id);
             }, 2000);
-        }
+        };
+
+        const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+            for(const item of e.clipboardData.items){
+                if (item.type.startsWith("image/")){
+                    const file = item.getAsFile();
+                    if(!file) continue;
+                    setPastedFile(file);
+                }
+            }
+        };
 
         console.log(selectedChat, 'selectedChat');
 
@@ -460,7 +502,7 @@ const shouldAutoScrollRef = useRef(true);
                                     : "bg-blue-500 mb-3 max-w-[50%] px-3 py-2 rounded-lg"
                                 }`}>
                                 <span className="break-words">
-                                {m.type === "sticker" ? (
+                                {m.type === "sticker" || m.type === "image" ? (
                                 <img
                                     src={m.content}
                                     alt="sticker"
@@ -479,6 +521,21 @@ const shouldAutoScrollRef = useRef(true);
                                 </div>
                             ))
                         )}
+                        <div
+                        className="flex justify-end p-2">
+                        {pastedFile && (
+                            <div className="relative">
+                            <button
+                            className="absolute top-2 left-2 flex h-8 w-8 items-center hover:cursor-pointer justify-center rounded-full bg-black/60 hover:bg-black/80 transition"
+                            onClick={() => setPastedFile(null)}
+                            >✕</button>
+                            <img
+                                className="max-w-[420px] max-h-[420px]"
+                                src={URL.createObjectURL(pastedFile)}
+                            />
+                            </div>
+                        )}
+                        </div>
                         <div ref={messagesEndRef} />
                         </div>
                         {typingUsers.length > 0 && (
@@ -496,6 +553,7 @@ const shouldAutoScrollRef = useRef(true);
                                 e.preventDefault();
                                 handleSendMessage();
                             }}
+                            onPaste={handlePaste}
                             onChange={handleTyping}
                             className="w-full focus:outline-none placeholder:text-zinc-500"
                             />

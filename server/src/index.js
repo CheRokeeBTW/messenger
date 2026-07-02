@@ -11,6 +11,7 @@ import messageRoutes from './routes/message.routes.js';
 import cookieParser from "cookie-parser";
 import userRoutes from './routes/users.routes.js';
 import stickerRoutes from "./routes/sticker.routes.js";
+import uploadRoutes from './routes/upload.routes.js';
 
 
 async function testDB() {
@@ -53,6 +54,9 @@ app.use("/messages", messageRoutes);
 app.use("/stickers", stickerRoutes);
 
 app.use("/users", userRoutes);
+
+//images
+app.use("/upload", uploadRoutes);
 
 app.get('/', (req, res) => {
   res.send('Messanger works')

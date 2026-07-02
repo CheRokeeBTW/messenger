@@ -25,12 +25,12 @@ export async function sendMessage(req, res) {
       [conversationId, senderId, content, type]
     );
 
-    const newMessage = {
-      ...message.rows[0],
-      read_by: [],
-    };
+    // const newMessage = {
+    //   ...message.rows[0],
+    //   read_by: [],
+    // };
 
-    res.json(newMessage);
+    // res.json(newMessage);
 
     res.json(message.rows[0]);
 

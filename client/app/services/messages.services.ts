@@ -17,7 +17,7 @@ export async function getMessages(
   return res.json();
 }
 
-export async function sendMessages(conversationId: string | undefined, content: string, type: "text" | "sticker" = "text"){
+export async function sendMessages(conversationId: string | undefined, content: string, type: "text" | "sticker" | "image" = "text"){
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/`,{
         method: "POST",
         headers: { "Content-Type":"application/json" },
