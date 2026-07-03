@@ -51,7 +51,7 @@ type TypingUser = {
 };
 
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
-    const [pastedFile, setPastedFile] = useState<File | null>(null);
+    const [pastedFile, setPastedFile] = useState<File[]>([]);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -73,6 +73,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [isStickerOpen, setIsStickerOpen] = useState<boolean>(false);
     const [sticker, setSticker] = useState([]);
     const [search, setSearch] = useState("");
+    const lastMessageRef = useRef<HTMLDivElement>(null);
 
     console.log("SOCKET ID", socket.id);
     const otherUserId = otherUser?.id;
@@ -97,7 +98,7 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     console.log(otherUserId, "other user");
 
     const isNearBottom = (el: any) => {
-        return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+        return el.scrollHeight - el.scrollTop - el.clientHeight < 500;
     };
 
         useEffect(() => {
@@ -246,16 +247,30 @@ const shouldAutoScrollRef = useRef(true);
             };
         }, []);
 
+        const scrollToBottomIfNeeded = () => {
+        const container = messagesEndRef.current?.parentElement;
+        const shouldScroll = container && isNearBottom(container);
+
+        if (shouldScroll) {
+            requestAnimationFrame(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            });
+        }
+    };
+
         const handleSendMessage = async () => {
     if (!selectedChat?.id) return;
 
     try {
-        if (pastedFile) {
-            const { url } = await uploadImage(pastedFile);
+        if (pastedFile.length > 0) {
+            const uploaded = await Promise.all(
+                pastedFile.map(file => uploadImage(file))
+            );
 
+        for (const res of uploaded) {
             const newMessage = await sendMessages(
                 selectedChat.id,
-                url,
+                res.url,
                 "image"
             );
 
@@ -269,8 +284,9 @@ const shouldAutoScrollRef = useRef(true);
                 message: newMessage,
                 sender: user.id,
             });
+        }
 
-            setPastedFile(null);
+            setPastedFile([]);
             setMessage("");
 
             return;
@@ -296,19 +312,26 @@ const shouldAutoScrollRef = useRef(true);
 
         setMessage("");
 
-        const container = messagesEndRef.current?.parentElement;
-        const shouldScroll = container && isNearBottom(container);
+        // const container = messagesEndRef.current?.parentElement;
+        // const shouldScroll = container && isNearBottom(container);
 
-        if (shouldScroll) {
-            setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView();
-            }, 0);
-        }
+        // if (shouldScroll) {
+        //     setTimeout(() => {
+        //         messagesEndRef.current?.scrollIntoView();
+        //     }, 0);
+        // }
 
     } catch (err) {
         console.error(err);
     }
 };
+
+useEffect(() => {
+    lastMessageRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+    });
+}, [messages]);
 
         const handleSendSticker = async (url: string) => {
             try{
@@ -415,10 +438,18 @@ const shouldAutoScrollRef = useRef(true);
                 if (item.type.startsWith("image/")){
                     const file = item.getAsFile();
                     if(!file) continue;
-                    setPastedFile(file);
+                    setPastedFile(prev => [...prev, file]);
                 }
             }
         };
+
+        useEffect(() => {
+            if (pastedFile.length > 0) {
+                requestAnimationFrame(() => {
+                    scrollToBottomIfNeeded();
+                });
+            }
+        }, [pastedFile]);
 
         console.log(selectedChat, 'selectedChat');
 
@@ -502,14 +533,22 @@ const shouldAutoScrollRef = useRef(true);
                                     : "bg-blue-500 mb-3 max-w-[50%] px-3 py-2 rounded-lg"
                                 }`}>
                                 <span className="break-words">
-                                {m.type === "sticker" || m.type === "image" ? (
-                                <img
-                                    src={m.content}
-                                    alt="sticker"
-                                    className="max-w-[180px] rounded-lg"
-                                />
-                                ) : (
-                                <span>{m.content}</span>
+                                {m.type === "text" && (
+                                     <span>{m.content}</span>
+                                )}
+
+                                {m.type === "sticker" && (
+                                    <img
+                                        src={m.content}
+                                        className="max-w-[180px] rounded-lg"
+                                    />
+                                )}
+
+                                {m.type === "image" && (
+                                    <img
+                                        src={m.content}
+                                        className="max-w-[420px] rounded-lg"
+                                    />
                                 )}
                                  {m.sender_id === user.id && (
                                     <span className="ml-1 text-xs">
@@ -523,18 +562,41 @@ const shouldAutoScrollRef = useRef(true);
                         )}
                         <div
                         className="flex justify-end p-2">
-                        {pastedFile && (
+                        {/* {pastedFile && (
                             <div className="relative">
                             <button
                             className="absolute top-2 left-2 flex h-8 w-8 items-center hover:cursor-pointer justify-center rounded-full bg-black/60 hover:bg-black/80 transition"
-                            onClick={() => setPastedFile(null)}
+                            onClick={() => setPastedFile([])}
                             >✕</button>
                             <img
                                 className="max-w-[420px] max-h-[420px]"
                                 src={URL.createObjectURL(pastedFile)}
                             />
                             </div>
+                        )} */}
+
+                        <div className="flex flex-wrap gap-2 max-w-[1000px] justify-end">
+                        {pastedFile.map((file, index) => 
+                            <div className="relative w-[200px] h-[200px] flex justify-center items-center"
+                                key={index}>
+                                <button
+                                    className="absolute top-2 left-2 flex h-8 w-8 items-center hover:cursor-pointer justify-center rounded-full bg-black/60 hover:bg-black/80 transition"
+                                    onClick={() => {
+                                        setPastedFile(prev => prev.filter((_, i) => i !== index))
+                                }}
+                                >✕</button>
+                                <img
+                                    className="w-full h-full rounded"
+                                    src={URL.createObjectURL(file)}
+                                     onLoad={() => {
+                                        lastMessageRef.current?.scrollIntoView({
+                                            behavior: "smooth"
+                                        });
+                                    }}
+                                />
+                            </div>
                         )}
+                        </div>
                         </div>
                         <div ref={messagesEndRef} />
                         </div>
