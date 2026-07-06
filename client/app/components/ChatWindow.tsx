@@ -83,6 +83,11 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
         selectedChatRef.current = selectedChat;
     }, [selectedChat]);
 
+    const getTime = (time: string) =>{
+        const timeFormat = time.split("T")[1].slice(0, 5);
+        return timeFormat
+    }
+
     useEffect(() => {
         if (!selectedChat?.id) return;
 
@@ -555,6 +560,13 @@ useEffect(() => {
                                     {otherUserId && m.read_by?.includes(otherUserId) ? "✓✓" : "✓"}
                                     </span>
                                 )}
+                                <div className="flex">
+                                    <span
+                                     className="text-[0.5rem] text-right flex ml-auto"
+                                     >
+                                        {getTime(m.created_at)}
+                                    </span>
+                                </div>
                                 </span>
                                 </div>
                                 </div>
