@@ -74,6 +74,44 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [sticker, setSticker] = useState([]);
     const [search, setSearch] = useState("");
     const lastMessageRef = useRef<HTMLDivElement>(null);
+    const [date, setDate] = useState<string>("");
+
+const getDate = (time: string) => {
+    const timeZone = "Europe/Moscow";
+
+    const messageDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(new Date(time));
+
+    const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(new Date());
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const yesterdayDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(yesterday);
+
+    if (messageDate === today) return "Today";
+    if (messageDate === yesterdayDate) return "Yesterday";
+
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        month: "long",
+        day: "numeric",
+    }).format(new Date(time));
+};
 
     console.log("SOCKET ID", socket.id);
     const otherUserId = otherUser?.id;
@@ -83,10 +121,13 @@ export default function ChatWindow( {selectedChat} : ChatWindowProps) {
         selectedChatRef.current = selectedChat;
     }, [selectedChat]);
 
-    const getTime = (time: string) =>{
-        const timeFormat = time.split("T")[1].slice(0, 5);
-        return timeFormat
-    }
+    const getTime = (time: string) => {
+        return new Intl.DateTimeFormat("ru-RU", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Moscow",
+        }).format(new Date(time));
+    };
 
     useEffect(() => {
         if (!selectedChat?.id) return;
@@ -525,7 +566,20 @@ useEffect(() => {
                           {messages.length === 0 ? (
                             <span>Start messaging</span>
                             ) : (
-                            messages.map((m) => (
+                            messages.map((m, index) => {
+                                const currDate = getDate(m.created_at);
+                                const prevDate = index > 0 ? getDate(messages[index - 1].created_at) : null;
+                                const showDate = currDate !== prevDate;
+                                return (
+                                <div
+                                key = {m.id}>
+                                {showDate && (
+                                    <div className="flex justify-center my-2">
+                                        <span className="rounded-full bg-gray-600 px-3 py-1 text-xs text-white">
+                                            {currDate}
+                                        </span>
+                                    </div>
+                                )}
                                 <div key={m.id}
                                 className={`flex p-2 ${m.sender_id === user.id 
                                     ? "justify-end" 
@@ -570,7 +624,8 @@ useEffect(() => {
                                 </span>
                                 </div>
                                 </div>
-                            ))
+                                </div>
+                            )})
                         )}
                         <div
                         className="flex justify-end p-2">
