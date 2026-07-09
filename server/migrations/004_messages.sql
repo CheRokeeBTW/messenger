@@ -3,6 +3,6 @@ CREATE TABLE messages (
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
   sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
   content TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  edited_at TIMESTAMP
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  edited_at TIMESTAMPTZ
 );

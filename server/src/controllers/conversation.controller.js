@@ -9,7 +9,6 @@ export async function createConversation(req, res) {
 
     const otherUserId = members[0];
 
-    // 1. check if DM already exists
     const existingConversation = await pool.query(
       `
       SELECT c.id
@@ -23,7 +22,6 @@ export async function createConversation(req, res) {
       [creatorId, otherUserId]
     );
 
-    // 2. if exists → return it instead of creating new
     if (existingConversation.rows.length > 0) {
       const conversationId = existingConversation.rows[0].id;
 
@@ -51,7 +49,6 @@ export async function createConversation(req, res) {
       return res.json(fullConversation.rows[0]);
     }
 
-    // 3. otherwise create new conversation
     const conversation = await pool.query(
       `
       INSERT INTO conversations (title, is_group)
@@ -85,8 +82,7 @@ export async function createConversation(req, res) {
         [memberId, conversationId]
       );
     }
-
-    // 4. return full conversation
+    
     const fullConversation = await pool.query(
       `
       SELECT 
