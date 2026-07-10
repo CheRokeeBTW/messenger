@@ -33,7 +33,7 @@ const app = express();
 
 app.use(
     cors({
-    origin: process.env.CLIENT_URL, 
+    origin: process.env.NEXT_PUBLIC_API_URL, 
     credentials: true
   })
 );
@@ -70,7 +70,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-    origin: process.env.CLIENT_URL,
+    origin: process.env.NEXT_PUBLIC_API_URL,
     methods: ["GET", "POST"],
     credentials: true,
   }
