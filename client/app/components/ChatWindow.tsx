@@ -42,6 +42,10 @@ type Message = {
   sender_id: string;
   created_at: string;
   read_by: string[];
+  attachments?: {
+    file_url: string;
+    file_type: string;
+  }[];
 };
 
 type TypingUser = {
@@ -310,14 +314,23 @@ const shouldAutoScrollRef = useRef(true);
     try {
         if (pastedFile.length > 0) {
             const uploaded = await Promise.all(
-                pastedFile.map(file => uploadImage(file))
+                pastedFile.map(async file => {
+                    const uploadedFile = await uploadImage(file);
+                    console.log(uploadedFile.url, "UPLOADEDFILE")
+                        return {
+                            file_url: uploadedFile.url,
+                            file_type: "image"
+                        };
+                    })
             );
 
-        for (const res of uploaded) {
+            console.log(uploaded, 'UPLOADED')
+
             const newMessage = await sendMessages(
                 selectedChat.id,
-                res.url,
-                "image"
+                message,
+                "image",
+                uploaded
             );
 
             dispatch(setLastMessage({
@@ -330,7 +343,7 @@ const shouldAutoScrollRef = useRef(true);
                 message: newMessage,
                 sender: user.id,
             });
-        }
+        
 
             setPastedFile([]);
             setMessage("");
@@ -603,11 +616,16 @@ useEffect(() => {
                                     />
                                 )}
 
-                                {m.type === "image" && (
-                                    <img
-                                        src={m.content}
-                                        className="max-w-[420px] rounded-lg"
-                                    />
+                                {m.attachments && m.attachments?.length > 0 && (
+                                    <>
+                                    {m.attachments.map((f) => (
+                                        <img
+                                            key = {f.file_url}
+                                            src={f.file_url}
+                                            className="max-w-[420px] rounded-lg"
+                                        />
+                                    ))}
+                                    </>
                                 )}
                                  {m.sender_id === user.id && (
                                     <span className="ml-1 text-xs">
