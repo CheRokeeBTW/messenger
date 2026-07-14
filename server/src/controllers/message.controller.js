@@ -3,7 +3,7 @@ import { pool } from "../config/db.js";
 export async function sendMessage(req, res) {
   try {
 
-    const { conversationId, content, type = "text" } = req.body;
+    const { conversationId, content, type = "text", attachments = [] } = req.body;
     const senderId = req.user.userId;
 
     const memberCheck = await pool.query(
@@ -25,14 +25,30 @@ export async function sendMessage(req, res) {
       [conversationId, senderId, content, type]
     );
 
-    // const newMessage = {
-    //   ...message.rows[0],
-    //   read_by: [],
-    // };
-
-    // res.json(newMessage);
-
-    res.json(message.rows[0]);
+    
+    const messageId = message.rows[0].id;
+    
+    if (attachments.length > 0) {
+      for (const attachment of attachments) {
+        await pool.query(
+          `
+          INSERT INTO message_attachments
+          (message_id, file_url, file_type)
+          VALUES ($1, $2, $3)
+          `,
+          [
+            messageId,
+            attachment.file_url,
+            attachment.file_type,
+          ]
+        );
+      }
+    }
+    
+      res.json({
+    ...message.rows[0],
+    attachments,
+  });
 
   } catch (error) {
 
@@ -77,6 +93,19 @@ export async function getMessages(req, res) {
     `;
 
     const messages = await pool.query(query, values);
+
+    for (const message of messages.rows) {
+      const attachments = await pool.query(
+        `
+        SELECT file_url, file_type
+        FROM message_attachments
+        WHERE message_id = $1
+        `,
+        [message.id]
+      );
+
+      message.attachments = attachments.rows;
+    }
 
     res.json(messages.rows);
 

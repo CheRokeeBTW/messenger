@@ -15,6 +15,7 @@ import { logoutUser } from "../services/auth.services";
 import { useRouter } from "next/navigation";
 import { uploadImage } from "../services/upload.services";
 import { playNotificationSound } from "../services/notification.service";
+import ImageViewer from "./ImageViewer";
 
 type Participant = {
   id: string;
@@ -42,6 +43,10 @@ type Message = {
   sender_id: string;
   created_at: string;
   read_by: string[];
+  attachments?: {
+    file_url: string;
+    file_type: string;
+  }[];
 };
 
 type TypingUser = {
@@ -51,6 +56,7 @@ type TypingUser = {
 };
 
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
+    const [openedImage, setOpenedImage] = useState<string | null>(null);
     const [pastedFile, setPastedFile] = useState<File[]>([]);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -310,14 +316,23 @@ const shouldAutoScrollRef = useRef(true);
     try {
         if (pastedFile.length > 0) {
             const uploaded = await Promise.all(
-                pastedFile.map(file => uploadImage(file))
+                pastedFile.map(async file => {
+                    const uploadedFile = await uploadImage(file);
+                    console.log(uploadedFile.url, "UPLOADEDFILE")
+                        return {
+                            file_url: uploadedFile.url,
+                            file_type: "image"
+                        };
+                    })
             );
 
-        for (const res of uploaded) {
+            console.log(uploaded, 'UPLOADED')
+
             const newMessage = await sendMessages(
                 selectedChat.id,
-                res.url,
-                "image"
+                message,
+                "image",
+                uploaded
             );
 
             dispatch(setLastMessage({
@@ -330,7 +345,7 @@ const shouldAutoScrollRef = useRef(true);
                 message: newMessage,
                 sender: user.id,
             });
-        }
+        
 
             setPastedFile([]);
             setMessage("");
@@ -595,19 +610,23 @@ useEffect(() => {
                                 {m.type === "text" && (
                                      <span>{m.content}</span>
                                 )}
-
                                 {m.type === "sticker" && (
                                     <img
                                         src={m.content}
                                         className="max-w-[180px] rounded-lg"
                                     />
                                 )}
-
-                                {m.type === "image" && (
-                                    <img
-                                        src={m.content}
-                                        className="max-w-[420px] rounded-lg"
-                                    />
+                                {m.attachments && m.attachments?.length > 0 && (
+                                    <div className="gap-2 flex flex-col">
+                                    {m.attachments.map((f) => (
+                                        <img
+                                            key = {f.file_url}
+                                            src={f.file_url}
+                                            onClick={() => setOpenedImage(f.file_url)}
+                                            className="max-w-[420px] rounded-lg hover:cursor-pointer"
+                                        />
+                                    ))}
+                                    </div>
                                 )}
                                  {m.sender_id === user.id && (
                                     <span className="ml-1 text-xs">
@@ -627,6 +646,10 @@ useEffect(() => {
                                 </div>
                             )})
                         )}
+                            <ImageViewer
+                                image={openedImage}
+                                onClose={() => setOpenedImage(null)}
+                            />
                         <div
                         className="flex justify-end p-2">
                         {/* {pastedFile && (

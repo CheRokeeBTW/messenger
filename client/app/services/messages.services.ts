@@ -17,12 +17,12 @@ export async function getMessages(
   return res.json();
 }
 
-export async function sendMessages(conversationId: string | undefined, content: string, type: "text" | "sticker" | "image" = "text"){
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/`,{
+export async function sendMessages(conversationId: string | undefined, content: string, type: "text" | "sticker" | "image" = "text", attachments?: {file_url: string, file_type: string}[]){
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/`, {
         method: "POST",
         headers: { "Content-Type":"application/json" },
         credentials: "include",
-        body: JSON.stringify({conversationId, content, type}),
+        body: JSON.stringify({conversationId, content, type, attachments}),
     });
 
     if(!res.ok) throw new Error();
