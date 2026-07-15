@@ -16,11 +16,12 @@ import { useRouter } from "next/navigation";
 import { uploadImage } from "../services/upload.services";
 import { playNotificationSound } from "../services/notification.service";
 import ImageViewer from "./ImageViewer";
+import { LoaderCircle, Check, X } from "lucide-react";
 
 type Participant = {
   id: string;
   username: string;
-}
+};
 
 type Conversation = {
   id: string;
@@ -57,7 +58,6 @@ type TypingUser = {
 
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
     const [openedImage, setOpenedImage] = useState<string | null>(null);
-    const [pastedFile, setPastedFile] = useState<File[]>([]);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -310,29 +310,50 @@ const shouldAutoScrollRef = useRef(true);
         }
     };
 
+    const [progress, setProgress] = useState<Record<string, number>>({});
+
+    const reset = () => {
+        setProgress({});
+    }
+
         const handleSendMessage = async () => {
     if (!selectedChat?.id) return;
 
     try {
-        if (pastedFile.length > 0) {
-            const uploaded = await Promise.all(
-                pastedFile.map(async file => {
-                    const uploadedFile = await uploadImage(file);
-                    console.log(uploadedFile.url, "UPLOADEDFILE")
-                        return {
-                            file_url: uploadedFile.url,
-                            file_type: "image"
-                        };
-                    })
-            );
+        console.log("FILES EXIST:", pendingImages);
+        if (pendingImages.length > 0) {
+            // setLoading(true);
+            // const uploaded = await Promise.all(
+            //     pastedFile.map(async file => {
+            //         const uploadedFile = await uploadImage(file, progress => {
+            //             setProgress((prev) => ({
+            //                 ...prev,
+            //                 [file.name]: progress
+            //             }));
+            //         })
 
-            console.log(uploaded, 'UPLOADED')
+            //         console.log(uploadedFile.url, "UPLOADEDFILE")
+            //             return {
+            //                 file_url: uploadedFile.url,
+            //                 file_type: "image"
+            //             };
+            //         })
+            // );
+
+            // console.log(uploaded, 'UPLOADED')
+
+            const attachments = pendingImages.map(img => ({
+                file_url: img.uploadedUrl!,
+                file_type: "image"
+            }));
+
+            if(finishedLoading) return;
 
             const newMessage = await sendMessages(
                 selectedChat.id,
                 message,
                 "image",
-                uploaded
+                attachments
             );
 
             dispatch(setLastMessage({
@@ -347,8 +368,9 @@ const shouldAutoScrollRef = useRef(true);
             });
         
 
-            setPastedFile([]);
+            setPendingImages([]);
             setMessage("");
+            // reset();
 
             return;
         }
@@ -373,17 +395,11 @@ const shouldAutoScrollRef = useRef(true);
 
         setMessage("");
 
-        // const container = messagesEndRef.current?.parentElement;
-        // const shouldScroll = container && isNearBottom(container);
-
-        // if (shouldScroll) {
-        //     setTimeout(() => {
-        //         messagesEndRef.current?.scrollIntoView();
-        //     }, 0);
-        // }
-
     } catch (err) {
         console.error(err);
+    }
+     finally {
+        reset();
     }
 };
 
@@ -494,23 +510,79 @@ useEffect(() => {
             }, 2000);
         };
 
+        type PendingImage = {
+            id: string, 
+            file: File;
+            progress: number;
+            uploadedUrl?: string;
+            status: "finished" | "uploading" | "failed"
+        };
+
+        const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+
         const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
             for(const item of e.clipboardData.items){
                 if (item.type.startsWith("image/")){
+
                     const file = item.getAsFile();
                     if(!file) continue;
-                    setPastedFile(prev => [...prev, file]);
+
+                    const pendingImage: PendingImage = {
+                        id: crypto.randomUUID(),
+                        file,
+                        progress: 0,
+                        status: "uploading",
+                    };
+
+                    setPendingImages((prev) => [
+                        ...prev,
+                        pendingImage
+                    ]);
+
+                    try{
+                        const uploaded = await uploadImage(file, progress => {
+                            setPendingImages(prev => 
+                                prev.map(image =>
+                                    image.id === pendingImage.id ? {
+                                        ...image,
+                                        progress,
+                                        } : image
+                                    ))});
+
+                        console.log(uploaded, "UPLOADEDFILE")
+                                        
+                        setPendingImages(prev =>
+                            prev.map(image =>
+                                image.id === pendingImage.id
+                                    ? {
+                                        ...image,
+                                        progress: 100,
+                                        uploadedUrl: uploaded.url,
+                                        status: "finished"
+                                    }
+                                    : image
+                            ));
+                    } catch {
+                        setPendingImages(prev =>
+                            prev.map(image =>
+                                image.id === pendingImage.id
+                                    ? {
+                                        ...image,
+                                        status: "failed"
+                                    }
+                                    : image
+                            ))}
+                        }
                 }
             }
-        };
 
         useEffect(() => {
-            if (pastedFile.length > 0) {
+            if (pendingImages.length > 0) {
                 requestAnimationFrame(() => {
                     scrollToBottomIfNeeded();
                 });
             }
-        }, [pastedFile]);
+        }, [pendingImages]);
 
         console.log(selectedChat, 'selectedChat');
 
@@ -551,6 +623,23 @@ useEffect(() => {
 
             const isOnline = otherUser ? onlineUsers.includes(otherUser.id) : false;
 
+            const isURL = (value: string) => {
+                try{
+                    if(!value.includes(".")) return false;
+
+                    new URL(
+                        value.startsWith("http")
+                            ? value
+                            : `https://${value}`
+                    );
+                    return true;
+                } catch {
+                    return false;
+                };
+            };
+
+        const finishedLoading = pendingImages.some(image => image.status === "uploading");
+
     return(
         <div className="flex w-full h-full">
                 {!selectedChat
@@ -585,6 +674,8 @@ useEffect(() => {
                                 const currDate = getDate(m.created_at);
                                 const prevDate = index > 0 ? getDate(messages[index - 1].created_at) : null;
                                 const showDate = currDate !== prevDate;
+                                const href = m.content.includes('http') ? m.content : `https://${m.content}`;
+                                const split = m.content.split(" ");
                                 return (
                                 <div
                                 key = {m.id}>
@@ -608,8 +699,26 @@ useEffect(() => {
                                 }`}>
                                 <span className="break-words">
                                 {m.type === "text" && (
-                                     <span>{m.content}</span>
-                                )}
+                                   split.map((m, index) => {
+                                    const href = m.includes('http') ? m : `https://${m}`;
+                                        return(
+                                            isURL(m) ? (
+                                                <a href={href}
+                                                key={index}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-400 visited:text-purple-500"
+                                                >
+                                                {m}{" "}
+                                                </a>
+                                            ) : (
+                                                <span
+                                                key={index}
+                                                >
+                                                    {m} {" "}
+                                                </span>
+                                            )
+                                    )}))}
                                 {m.type === "sticker" && (
                                     <img
                                         src={m.content}
@@ -618,6 +727,7 @@ useEffect(() => {
                                 )}
                                 {m.attachments && m.attachments?.length > 0 && (
                                     <div className="gap-2 flex flex-col">
+                                    <span>{m.content}</span>
                                     {m.attachments.map((f) => (
                                         <img
                                             key = {f.file_url}
@@ -652,32 +762,43 @@ useEffect(() => {
                             />
                         <div
                         className="flex justify-end p-2">
-                        {/* {pastedFile && (
-                            <div className="relative">
-                            <button
-                            className="absolute top-2 left-2 flex h-8 w-8 items-center hover:cursor-pointer justify-center rounded-full bg-black/60 hover:bg-black/80 transition"
-                            onClick={() => setPastedFile([])}
-                            >✕</button>
-                            <img
-                                className="max-w-[420px] max-h-[420px]"
-                                src={URL.createObjectURL(pastedFile)}
-                            />
-                            </div>
-                        )} */}
 
                         <div className="flex flex-wrap gap-2 max-w-[1000px] justify-end">
-                        {pastedFile.map((file, index) => 
+                        {pendingImages.map((image, index) => 
                             <div className="relative w-[200px] h-[200px] flex justify-center items-center"
                                 key={index}>
+                                    {image.status === "uploading" && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                                           <LoaderCircle className="w-10 h-10 text-white animate-spin" />
+                                            <span className="text-white font-semibold">
+                                                {image.progress}%
+                                            </span>
+                                        </div>
+                                    )}
+                                    {image.status === "finished" && (
+                                       <div className="absolute inset-0 bg-black/25 flex items-center justify-center rounded">
+                                        <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center">
+                                            <Check className="text-white w-7 h-7" />
+                                        </div>
+                                    </div>
+                                    )}
+                                    {image.status === "failed" && (
+                                        <div className="absolute inset-0 bg-red-500/40 flex flex-col items-center justify-center rounded">
+                                            <X className="w-10 h-10 text-white" />
+                                            <span className="text-white mt-2">
+                                                Upload failed
+                                            </span>
+                                    </div>
+                                    )}
                                 <button
                                     className="absolute top-2 left-2 flex h-8 w-8 items-center hover:cursor-pointer justify-center rounded-full bg-black/60 hover:bg-black/80 transition"
                                     onClick={() => {
-                                        setPastedFile(prev => prev.filter((_, i) => i !== index))
+                                        setPendingImages(prev => prev.filter((_, i) => i !== index))
                                 }}
                                 >✕</button>
                                 <img
                                     className="w-full h-full rounded"
-                                    src={URL.createObjectURL(file)}
+                                    src={URL.createObjectURL(image.file)}
                                      onLoad={() => {
                                         lastMessageRef.current?.scrollIntoView({
                                             behavior: "smooth"
@@ -721,10 +842,14 @@ useEffect(() => {
                             className="w-[1.3rem] h-[1.3rem] mr-[10px] hover:cursor-pointer"
                             />
                             <Image
-                            onClick={handleSendMessage}
+                            onClick={!finishedLoading ? handleSendMessage : undefined}
                             alt = "sendMsg"
                             src = {sendImg}
-                            className="w-[1.3rem] h-[1.3rem] hover:cursor-pointer"
+                            className={`w-[1.3rem] h-[1.3rem]
+                                 ${finishedLoading 
+                                   ? "opacity-50 cursor-not-allowed"
+                                   : "hover:cursor-pointer"}`
+                                }
                              />
                         </div>
                     </div>
