@@ -3,7 +3,7 @@ import { pool } from "../config/db.js";
 export async function sendMessage(req, res) {
   try {
 
-    const { conversationId, content, type = "text", attachments = [] } = req.body;
+    const { conversationId, content, type = "text", attachments = [], replyTo } = req.body;
     const senderId = req.user.userId;
 
     const memberCheck = await pool.query(
@@ -19,12 +19,33 @@ export async function sendMessage(req, res) {
     };
 
     const message = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_id, content, type)
-       VALUES ($1,$2,$3, $4)
-       RETURNING *`,
-      [conversationId, senderId, content, type]
+      `
+      INSERT INTO messages (conversation_id, sender_id, content, type, reply_to)
+      VALUES ($1,$2,$3, $4, $5)
+      RETURNING *,
+       (SELECT username FROM users WHERE id = sender_id) AS sender_name
+       `,
+      [conversationId, senderId, content, type, replyTo]
     );
 
+      if(message.rows[0].reply_to){
+          const reply = await pool.query(
+            `
+           SELECT
+            m.id,
+            m.content,
+            m.sender_id,
+            u.username AS sender_name
+        FROM messages m
+        JOIN users u
+        ON u.id = m.sender_id
+        WHERE m.id = $1;
+            `,
+            [message.rows[0].reply_to]
+          );
+
+          message.rows[0].reply = reply.rows[0];
+        }
     
     const messageId = message.rows[0].id;
     
@@ -68,15 +89,17 @@ export async function getMessages(req, res) {
     const { cursor } = req.query;
 
     let query = `
-      SELECT 
-        m.*,
-        COALESCE(
-          json_agg(r.user_id) FILTER (WHERE r.user_id IS NOT NULL),
-          '[]'
-        ) AS read_by
-      FROM messages m
-      LEFT JOIN message_reads r ON r.message_id = m.id
-      WHERE m.conversation_id = $1
+    SELECT
+       m.*,
+      u.username AS sender_name,
+      COALESCE(
+        json_agg(r.user_id) FILTER (WHERE r.user_id IS NOT NULL),
+        '[]'
+      ) AS read_by
+    FROM messages m
+    JOIN users u ON u.id = m.sender_id
+    LEFT JOIN message_reads r ON r.message_id = m.id
+    WHERE m.conversation_id = $1
     `;
 
     const values = [conversationId];
@@ -87,7 +110,7 @@ export async function getMessages(req, res) {
     }
 
     query += `
-      GROUP BY m.id
+      GROUP BY m.id, u.username
       ORDER BY m.created_at DESC, m.id DESC
       LIMIT 50
     `;
@@ -103,6 +126,25 @@ export async function getMessages(req, res) {
         `,
         [message.id]
       );
+
+    if (message.reply_to) {
+      const reply = await pool.query(
+        `
+        SELECT
+          m.id,
+          m.content,
+          m.sender_id,
+          u.username AS sender_name,
+          m.type
+        FROM messages m
+        JOIN users u ON u.id = m.sender_id
+        WHERE m.id = $1
+        `,
+        [message.reply_to]
+      );
+
+      message.reply = reply.rows[0];
+    }
 
       message.attachments = attachments.rows;
     }

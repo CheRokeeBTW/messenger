@@ -35,19 +35,30 @@ type Conversation = {
 
 type ChatWindowProps = {
     selectedChat: Conversation | null;
-}
+};
+
+type ReplyMessage = {
+  id: string;
+  content: string;
+  sender_id: string;
+  sender_name: string;
+  type: "text" | "sticker" | "image";
+};
 
 type Message = {
   id: string;
   type: "text" | "sticker" | "image";
   content: string;
   sender_id: string;
+  sender_name: string;
   created_at: string;
   read_by: string[];
   attachments?: {
     file_url: string;
     file_type: string;
   }[];
+  reply_to?: string;
+  reply?: ReplyMessage;
 };
 
 type TypingUser = {
@@ -57,6 +68,7 @@ type TypingUser = {
 };
 
 export default function ChatWindow( {selectedChat} : ChatWindowProps) {
+    const [replyTo, setReplyTo] = useState<Message | null>(null);
     const [openedImage, setOpenedImage] = useState<string | null>(null);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -322,25 +334,6 @@ const shouldAutoScrollRef = useRef(true);
     try {
         console.log("FILES EXIST:", pendingImages);
         if (pendingImages.length > 0) {
-            // setLoading(true);
-            // const uploaded = await Promise.all(
-            //     pastedFile.map(async file => {
-            //         const uploadedFile = await uploadImage(file, progress => {
-            //             setProgress((prev) => ({
-            //                 ...prev,
-            //                 [file.name]: progress
-            //             }));
-            //         })
-
-            //         console.log(uploadedFile.url, "UPLOADEDFILE")
-            //             return {
-            //                 file_url: uploadedFile.url,
-            //                 file_type: "image"
-            //             };
-            //         })
-            // );
-
-            // console.log(uploaded, 'UPLOADED')
 
             const attachments = pendingImages.map(img => ({
                 file_url: img.uploadedUrl!,
@@ -349,12 +342,12 @@ const shouldAutoScrollRef = useRef(true);
 
             if(finishedLoading) return;
 
-            const newMessage = await sendMessages(
-                selectedChat.id,
-                message,
-                "image",
+            const newMessage = await sendMessages({
+                conversationId: selectedChat.id,
+                content: message,
+                type: "image",
                 attachments
-            );
+        });
 
             dispatch(setLastMessage({
                 conversationId: selectedChat.id,
@@ -377,10 +370,13 @@ const shouldAutoScrollRef = useRef(true);
 
         if (!message.trim()) return;
 
-        const newMessage = await sendMessages(
-            selectedChat.id,
-            message
-        );
+        const newMessage = await sendMessages({
+            conversationId: selectedChat.id,
+            content: message,
+            type: "text",
+            attachments: [],
+            replyTo: replyTo?.id,
+    })
 
         dispatch(setLastMessage({
             conversationId: selectedChat.id,
@@ -394,6 +390,7 @@ const shouldAutoScrollRef = useRef(true);
         });
 
         setMessage("");
+        setReplyTo(null);
 
     } catch (err) {
         console.error(err);
@@ -413,11 +410,11 @@ useEffect(() => {
         const handleSendSticker = async (url: string) => {
             try{
                 if (!selectedChat?.id) return;
-                const newMessage = await sendMessages(
-                    selectedChat?.id,
-                    url,
-                    "sticker"
-                );
+                const newMessage = await sendMessages({
+                    conversationId: selectedChat?.id,
+                    content: url,
+                    type: "sticker"
+            });
                 
                 dispatch(setLastMessage({
                     conversationId: selectedChat.id,
@@ -677,7 +674,7 @@ useEffect(() => {
                                 const href = m.content.includes('http') ? m.content : `https://${m.content}`;
                                 const split = m.content.split(" ");
                                 return (
-                                <div
+                                    <div
                                 key = {m.id}>
                                 {showDate && (
                                     <div className="flex justify-center my-2">
@@ -686,6 +683,7 @@ useEffect(() => {
                                         </span>
                                     </div>
                                 )}
+                                        <div className="group relative">
                                 <div key={m.id}
                                 className={`flex p-2 ${m.sender_id === user.id 
                                     ? "justify-end" 
@@ -699,24 +697,48 @@ useEffect(() => {
                                 }`}>
                                 <span className="break-words">
                                 {m.type === "text" && (
-                                   split.map((m, index) => {
-                                    const href = m.includes('http') ? m : `https://${m}`;
+                                   split.map((w, index) => {
+                                    const href = w.includes('http') ? w : `https://${w}`;
                                         return(
-                                            isURL(m) ? (
+                                            isURL(w) ? (
                                                 <a href={href}
                                                 key={index}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-blue-400 visited:text-purple-500"
                                                 >
-                                                {m}{" "}
+                                            {replyTo !== null && (
+                                                <>
+                                                {replyTo.content}
+                                                </>
+                                            )}
+                                                {w}{" "}
                                                 </a>
                                             ) : (
+                                                <div className="flex flex-col">
+                                                <span>
+                                                    {m.reply && (
+                                                        <div
+                                                         className="border-l-3 border-blue-400 bg-blue-100 rounded-sm"
+                                                        >
+                                                        <div className="mx-3 py-2">
+                                                        <p className="text-blue-400">
+                                                            {m.reply?.sender_name}
+                                                        </p>
+                                                        <p>
+                                                            {m.reply?.content}
+                                                        </p>
+                                                        </div>
+                                                        </div>
+                                                    )}
+                                                </span>
                                                 <span
                                                 key={index}
+                                                className="mt-1"
                                                 >
-                                                    {m} {" "}
+                                                    {w} {" "}
                                                 </span>
+                                                </div>
                                             )
                                     )}))}
                                 {m.type === "sticker" && (
@@ -738,19 +760,32 @@ useEffect(() => {
                                     ))}
                                     </div>
                                 )}
+                                {/* <div className="flex justify-between mt-1"> */}
+                                <div
+                                    className="opacity-0 text-sm text-white absolute w-[40px] px-1 p-0.5 rounded-lg group-hover:opacity-100 transition-all top-0 right-2 bg-gray-500"
+                                >
+                                    <button
+                                        onClick={( () => setReplyTo(m) )}
+                                        className="hover:cursor-pointer"
+                                    >
+                                    ↩
+                                    </button>
+                                </div>
+                                {/* </div> */}
+                                <div className="flex">
                                  {m.sender_id === user.id && (
-                                    <span className="ml-1 text-xs">
+                                    <span className="mr-4 text-xs text-blue-500">
                                     {otherUserId && m.read_by?.includes(otherUserId) ? "✓✓" : "✓"}
                                     </span>
                                 )}
-                                <div className="flex">
                                     <span
-                                     className="text-[0.5rem] text-right flex ml-auto"
+                                     className="text-[0.6rem] text-right flex ml-auto text-blue-500"
                                      >
                                         {getTime(m.created_at)}
                                     </span>
                                 </div>
                                 </span>
+                                </div>
                                 </div>
                                 </div>
                                 </div>
@@ -760,9 +795,7 @@ useEffect(() => {
                                 image={openedImage}
                                 onClose={() => setOpenedImage(null)}
                             />
-                        <div
-                        className="flex justify-end p-2">
-
+                        <div className="flex justify-end p-2">
                         <div className="flex flex-wrap gap-2 max-w-[1000px] justify-end">
                         {pendingImages.map((image, index) => 
                             <div className="relative w-[200px] h-[200px] flex justify-center items-center"
@@ -811,6 +844,27 @@ useEffect(() => {
                         </div>
                         <div ref={messagesEndRef} />
                         </div>
+                        {replyTo !== null && (
+                            <div
+                                className="bg-gray-100 flex justify-between"
+                            >
+                            <div className="flex flex-col ml-5 my-2">
+                                <p className="text-blue-800">
+                                    Reply to {replyTo.sender_name}
+                                </p>
+                                <p className="text-black text-sm">
+                                    {replyTo.content.length > 20 
+                                    ? (replyTo.content.slice(0,20) + "...")
+                                    : (replyTo.content)
+                                    }
+                                </p>
+                            </div>
+                            <button
+                             onClick={ ()=>setReplyTo(null) }
+                             className="mr-5 text-gray-500 hover:cursor-pointer"
+                             >x</button>
+                            </div>
+                        )}
                         {typingUsers.length > 0 && (
                         <div className="text-sm text-black px-2 bg-gray-200">
                             {typingUsers.map(u => u.username).join(", ")} is typing...
